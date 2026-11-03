@@ -8,3 +8,6 @@ test-results
 .vercel
 .env*.local
 coverage
+
+.vercel
+.env*

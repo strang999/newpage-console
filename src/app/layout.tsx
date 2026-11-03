@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { QueryProvider } from "./_components/query-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -20,7 +21,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <p className="text-xs text-muted">Synthetic data · USD · through May 2026</p>
           </div>
         </header>
-        {children}
+        <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
   );
