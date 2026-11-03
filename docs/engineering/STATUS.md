@@ -7,11 +7,12 @@ Updated: 2026-11-03 (Asia/Bangkok). Execution plan: planning package `PLAN-STRIC
 | Phase | State | Evidence |
 |---|---|---|
 | P0 / F00 foundation | done. CI green (run 41619038215), Vercel deployment Ready, host streaming verified incrementally (tokens over ~3 s via `vercel curl`), root 200. Independent review FAIL -> 3 defects + 2 incompletes fixed (regex escaping in depcruise config, forced-colors focus ring, server-only build proof as `pnpm verify:server-only`) | `features/F00-foundation.md` |
-| P1 / F01 portfolio | implemented, locally verified; review + push pending | `features/F01-portfolio.md` |
+| P1 / F01 portfolio | done: review PASS, commit 350e7da, CI run 41620554596 green | `features/F01-portfolio.md` |
+| P2 / F02 explorer | implemented, locally verified; review + push pending | `features/F02-explorer.md` |
 
 ## Next concrete step
 
-Finish P1 gates (review, commit, push, preview), then P2 explorer + URL state.
+Finish P2 gates (review, commit, push), then P3 streaming assistant (3 commits, Anton checkpoint 1).
 
 ## Known gaps / limitations
 
@@ -24,3 +25,4 @@ Finish P1 gates (review, commit, push, preview), then P2 explorer + URL state.
 
 - 57b8cd7 docs(engineering): define architecture and delivery rules
 - 73faabe chore(foundation): runnable shell, starter route, boundary checks, CI
+- 350e7da feat(portfolio): show verified portfolio health and market table

@@ -15,7 +15,7 @@ test("portfolio overview shows the verified totals, 13 markets and status text",
   await expect(kpis.getByText("100.4%", { exact: true })).toBeVisible();
   await expect(kpis.getByText("6", { exact: true })).toBeVisible();
 
-  const table = page.getByRole("table");
+  const table = page.getByRole("table", { name: /by market for/ });
   await expect(table.locator("tbody tr")).toHaveCount(13);
   await expect(table.getByText("On track", { exact: true })).toHaveCount(7);
   await expect(table.getByText("At risk", { exact: true })).toHaveCount(4);
@@ -35,7 +35,7 @@ test("portfolio overview shows the verified totals, 13 markets and status text",
 test("the table scrolls horizontally inside its own region on a narrow viewport", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "narrow-viewport behaviour");
   await page.goto("/");
-  const region = page.getByRole("region", { name: "Markets" });
+  const region = page.getByRole("region", { name: /All markets/ });
   const { scrollWidth, clientWidth } = await region.evaluate((el) => ({ scrollWidth: el.scrollWidth, clientWidth: el.clientWidth }));
   expect(scrollWidth).toBeGreaterThan(clientWidth);
   const pageOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

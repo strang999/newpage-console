@@ -3,7 +3,9 @@ import { Dashboard } from "./_components/dashboard";
 import { datasetQueryKey, makeQueryClient } from "./_components/query-client";
 import { loadDataset } from "./_server/dataset";
 
-export default function HomePage() {
+export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  // Rendering depends on the query string (shareable view state), so this page is rendered per request.
+  await searchParams;
   const queryClient = makeQueryClient();
   queryClient.setQueryData(datasetQueryKey, loadDataset());
 

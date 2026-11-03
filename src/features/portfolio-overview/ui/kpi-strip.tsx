@@ -13,12 +13,15 @@ function Kpi({ label, value, note, title }: { label: string; value: string; note
   );
 }
 
-export function KpiStrip({ health }: { health: PortfolioHealth }) {
+export function KpiStrip({ health, snapshotPeriod }: { health: PortfolioHealth; snapshotPeriod: string }) {
   const { metrics, statusCounts, needsAttention, period } = health;
   const month = formatPeriod(period);
   return (
-    <section aria-label="Portfolio health">
-      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">Source: dataset</p>
+    <section aria-labelledby="health-heading">
+      <h2 id="health-heading" className="text-lg font-semibold">
+        Portfolio health
+      </h2>
+      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">Source: dataset · all markets and products</p>
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Kpi
           label="Revenue"
@@ -39,7 +42,7 @@ export function KpiStrip({ health }: { health: PortfolioHealth }) {
         <Kpi
           label="Markets needing attention"
           value={String(needsAttention)}
-          note={`${statusCounts.at_risk} at risk + ${statusCounts.off_track} off track · ${statusCounts.on_track} on track · supplied status snapshot, ${month}`}
+          note={`${statusCounts.at_risk} at risk + ${statusCounts.off_track} off track · ${statusCounts.on_track} on track · supplied status snapshot, ${formatPeriod(snapshotPeriod)}`}
         />
       </dl>
     </section>

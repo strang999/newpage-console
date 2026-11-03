@@ -7,6 +7,12 @@ const usdCompact = new Intl.NumberFormat(LOCALE, {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
+const usdAxis = new Intl.NumberFormat(LOCALE, {
+  style: "currency",
+  currency: "USD",
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
 const usdExact = new Intl.NumberFormat(LOCALE, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const integer = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 0 });
 const monthYear = new Intl.DateTimeFormat(LOCALE, { month: "short", year: "numeric", timeZone: "UTC" });
@@ -16,6 +22,11 @@ export const NOT_AVAILABLE = "N/A";
 /** $22.85M */
 export function formatUsdCompact(value: number | null): string {
   return value === null ? NOT_AVAILABLE : usdCompact.format(value);
+}
+
+/** $22.9M, short form for chart axes */
+export function formatUsdAxis(value: number): string {
+  return usdAxis.format(value);
 }
 
 /** $22,850,419 */

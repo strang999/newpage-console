@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import raw from "@/data/starter/data.json";
 import { datasetSchema } from "@/domains/market";
@@ -40,9 +41,23 @@ describe("PortfolioOverview", () => {
     expect(within(row).getByText("N/A")).toBeInTheDocument();
   });
 
-  it("has a single h1 and a keyboard-reachable scroll container for the table", () => {
+  it("has a keyboard-reachable scroll container for the table and no h1 (the page title belongs to the explorer)", () => {
     render(<PortfolioOverview dataset={dataset} />);
-    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    expect(screen.getByRole("region", { name: "Markets" })).toHaveAttribute("tabindex", "0");
+    expect(screen.queryAllByRole("heading", { level: 1 })).toHaveLength(0);
+    expect(screen.getByRole("region", { name: /All markets/ })).toHaveAttribute("tabindex", "0");
+  });
+
+  it("derived figures follow the selected period while status stays the latest snapshot", () => {
+    render(<PortfolioOverview dataset={dataset} period="2026-03" />);
+    expect(screen.getByText(/derived from monthly facts, Mar 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/supplied status snapshot, May 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Supplied snapshot, May 2026/)).toBeInTheDocument();
+  });
+
+  it("market names call onSelectMarket when provided", async () => {
+    const picked: string[] = [];
+    render(<PortfolioOverview dataset={dataset} onSelectMarket={(id) => picked.push(id)} />);
+    await userEvent.click(screen.getByRole("button", { name: "Germany" }));
+    expect(picked).toEqual(["de"]);
   });
 });

@@ -1,9 +1,11 @@
 "use client";
 
+import { MarketExplorer } from "@/features/market-explorer";
 import { PortfolioOverview } from "@/features/portfolio-overview";
+import { useViewState } from "../_url/use-view-state";
 import { useDataset } from "./dataset-query";
 
-/** Composition root for the dashboard surfaces. Features receive typed data; they never import each other. */
+/** Composition root for the dashboard surfaces. Features receive typed data and callbacks; they never import each other. */
 export function Dashboard() {
   const { data, error, isPending } = useDataset();
 
@@ -17,5 +19,23 @@ export function Dashboard() {
       </p>
     );
   }
-  return <PortfolioOverview dataset={data} />;
+  return <DashboardView dataset={data} />;
+}
+
+function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof useDataset>["data"]> }) {
+  const { state, navigate } = useViewState(dataset);
+  const scope = { regionId: state.region, marketId: state.market, productId: state.product };
+
+  return (
+    <div className="flex flex-col gap-8">
+      <MarketExplorer
+        dataset={dataset}
+        scope={scope}
+        period={state.period}
+        onSelect={(selection) => navigate(selection)}
+        onPeriodChange={(period) => navigate({ period })}
+      />
+      <PortfolioOverview dataset={dataset} period={state.period} onSelectMarket={(market) => navigate({ market })} />
+    </div>
+  );
 }
