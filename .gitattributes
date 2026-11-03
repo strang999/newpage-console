@@ -1,0 +1,2 @@
+# Starter assets must stay byte-identical (SHA-256 checked); never normalise line endings.
+data/starter/** -text

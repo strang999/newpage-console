@@ -1,0 +1,54 @@
+{
+  "name": "market-operations-console",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.24.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "depcruise": "depcruise src --config .dependency-cruiser.cjs",
+    "test": "vitest run",
+    "verify:starter": "node scripts/verify-starter.mjs",
+    "check": "pnpm verify:starter && pnpm verify:contrast && pnpm typecheck && pnpm lint && pnpm depcruise && pnpm test && pnpm build",
+    "e2e": "playwright test",
+    "verify:contrast": "node scripts/check-contrast.mjs",
+    "verify:server-only": "node scripts/verify-server-only.mjs"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.105.3",
+    "eventsource-parser": "4.1.3",
+    "next": "16.4.4",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "server-only": "0.0.1",
+    "web-vitals": "6.2.3",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "1.64.1",
+    "@tailwindcss/postcss": "4.3.4",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.2.1",
+    "dependency-cruiser": "18.7.2",
+    "eslint": "^10.14.0",
+    "eslint-config-next": "16.4.4",
+    "jsdom": "^30.1.3",
+    "postcss": "^8.5.32",
+    "tailwindcss": "4.3.4",
+    "typescript": "5.9.3",
+    "vitest": "5.1.0"
+  }
+}
