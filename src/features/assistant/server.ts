@@ -6,7 +6,8 @@
 // event contract (see CONTRACT.md) is what matters.
 //
 // Adapted copy of data/starter/reference/chat-route.ts (kept pristine). Changes so far:
-// the fixtures import path, `server-only`, and the handler lives here with a thin route wrapper.
+// the fixtures import path, `server-only`, the handler lives here with a thin route wrapper, and pickFixture gives
+// error/abstain fixtures priority (see the comment there).
 
 import "server-only";
 import fixtures from "@/data/starter/fixtures.json";
@@ -22,7 +23,11 @@ type Fixture = {
 function pickFixture(question: string): Fixture {
   const q = question.toLowerCase();
   const list = fixtures.fixtures as Fixture[];
-  const hit = list.find((f) => (f.keywords ?? []).some((k) => q.includes(k)));
+  const matches = (f: Fixture) => (f.keywords ?? []).some((k) => q.includes(k));
+  // Local matcher override: an explicit error trigger or an unsupported-horizon question must win over a topic
+  // keyword, otherwise "Germany next year" would answer about Germany instead of abstaining. Original order is
+  // kept inside each group.
+  const hit = list.find((f) => f.kind === "error" && matches(f)) ?? list.find((f) => f.kind === "abstain" && matches(f)) ?? list.find(matches);
   return hit ?? (fixtures.default as Fixture);
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { AssistantPanel } from "@/features/assistant";
 import { MarketExplorer } from "@/features/market-explorer";
 import { PortfolioOverview } from "@/features/portfolio-overview";
 import { useViewState } from "../_url/use-view-state";
@@ -27,7 +28,8 @@ function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof use
   const scope = { regionId: state.region, marketId: state.market, productId: state.product };
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="flex min-w-0 flex-col gap-8">
       <MarketExplorer
         dataset={dataset}
         scope={scope}
@@ -36,6 +38,10 @@ function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof use
         onPeriodChange={(period) => navigate({ period })}
       />
       <PortfolioOverview dataset={dataset} period={state.period} onSelectMarket={(market) => navigate({ market })} />
+      </div>
+      <aside aria-label="Assistant" className="xl:sticky xl:top-4 xl:h-[calc(100vh-2rem)] xl:self-start">
+        <AssistantPanel />
+      </aside>
     </div>
   );
 }

@@ -30,6 +30,11 @@ describe("supplied mock /api/chat (starter route, unchanged protocol)", () => {
     expect(events).toEqual([{ type: "error", message: expect.any(String) }]);
   });
 
+  it("abstain and error triggers win over topic keywords (Germany next year abstains)", async () => {
+    expect((await ask("Germany next year")).events.at(-1)).toMatchObject({ type: "done", kind: "abstain" });
+    expect((await ask("force error in germany")).events).toEqual([{ type: "error", message: expect.any(String) }]);
+  });
+
   it("abstains for a beyond-horizon question", async () => {
     const { events } = await ask("what about 2027");
     expect(events.at(-1)).toMatchObject({ type: "done", kind: "abstain", confidence: "low" });
