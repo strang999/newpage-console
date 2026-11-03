@@ -1,0 +1,440 @@
+{
+  "meta": {
+    "currency": "USD",
+    "periods": [
+      "2024-06",
+      "2024-07",
+      "2024-08",
+      "2024-09",
+      "2024-10",
+      "2024-11",
+      "2024-12",
+      "2025-01",
+      "2025-02",
+      "2025-03",
+      "2025-04",
+      "2025-05",
+      "2025-06",
+      "2025-07",
+      "2025-08",
+      "2025-09",
+      "2025-10",
+      "2025-11",
+      "2025-12",
+      "2026-01",
+      "2026-02",
+      "2026-03",
+      "2026-04",
+      "2026-05"
+    ],
+    "latestPeriod": "2026-05",
+    "generatedAt": "2026-06-09"
+  },
+  "counts": {
+    "regions": 4,
+    "markets": 13,
+    "products": 5,
+    "periods": 24,
+    "facts": 1560,
+    "fixtures": 7
+  },
+  "integrity": {
+    "duplicateFacts": 0,
+    "missingFacts": 0,
+    "unexpectedFacts": 0,
+    "invalidCitationReferences": []
+  },
+  "latestStatusCounts": {
+    "on_track": 7,
+    "off_track": 2,
+    "at_risk": 4
+  },
+  "portfolioLatest": {
+    "actual": 22850419,
+    "forecast": 22748448,
+    "priorYear": 21294644,
+    "units": 103868,
+    "growthPct": 7.3059451005614395,
+    "forecastAttainmentPct": 100.4482547556651,
+    "forecastGap": 101971
+  },
+  "regionsLatest": {
+    "na": {
+      "actual": 4379988,
+      "forecast": 4337464,
+      "priorYear": 3973592,
+      "units": 19877,
+      "growthPct": 10.227421436322604,
+      "forecastAttainmentPct": 100.98038854040057,
+      "forecastGap": 42524
+    },
+    "eu": {
+      "actual": 7057380,
+      "forecast": 7398806,
+      "priorYear": 6937825,
+      "units": 32030,
+      "growthPct": 1.723234587208533,
+      "forecastAttainmentPct": 95.3853905616663,
+      "forecastGap": -341426
+    },
+    "apac": {
+      "actual": 9491556,
+      "forecast": 9051254,
+      "priorYear": 8508928,
+      "units": 43228,
+      "growthPct": 11.548199726216989,
+      "forecastAttainmentPct": 104.8645414215533,
+      "forecastGap": 440302
+    },
+    "latam": {
+      "actual": 1921495,
+      "forecast": 1960924,
+      "priorYear": 1874299,
+      "units": 8733,
+      "growthPct": 2.5180614192292783,
+      "forecastAttainmentPct": 97.9892642448152,
+      "forecastGap": -39429
+    }
+  },
+  "markets": [
+    {
+      "id": "us",
+      "name": "United States",
+      "regionId": "na",
+      "suppliedKpis": {
+        "revenue": 2949130,
+        "growthPct": 10.0,
+        "sharePct": 8.8,
+        "forecastAttainmentPct": 100.5,
+        "status": "on_track",
+        "anomalies": []
+      },
+      "calculatedLatest": {
+        "actual": 2949131,
+        "forecast": 2932397,
+        "priorYear": 2681243,
+        "units": 13388,
+        "growthPct": 9.991186923378459,
+        "forecastAttainmentPct": 100.57065942981119,
+        "forecastGap": 16734
+      }
+    },
+    {
+      "id": "ca",
+      "name": "Canada",
+      "regionId": "na",
+      "suppliedKpis": {
+        "revenue": 1430859,
+        "growthPct": 10.7,
+        "sharePct": 28.3,
+        "forecastAttainmentPct": 102.1,
+        "status": "on_track",
+        "anomalies": []
+      },
+      "calculatedLatest": {
+        "actual": 1430857,
+        "forecast": 1405067,
+        "priorYear": 1292349,
+        "units": 6489,
+        "growthPct": 10.71753837392222,
+        "forecastAttainmentPct": 101.83549965944685,
+        "forecastGap": 25790
+      }
+    },
+    {
+      "id": "de",
+      "name": "Germany",
+      "regionId": "eu",
+      "suppliedKpis": {
+        "revenue": 1676586,
+        "growthPct": -9.7,
+        "sharePct": 8.9,
+        "forecastAttainmentPct": 92.0,
+        "status": "off_track",
+        "anomalies": [
+          {
+            "period": "2026-03",
+            "type": "dip",
+            "note": "Revenue fell 27% versus the prior month."
+          }
+        ]
+      },
+      "calculatedLatest": {
+        "actual": 1676586,
+        "forecast": 1817644,
+        "priorYear": 1857237,
+        "units": 7618,
+        "growthPct": -9.726868461052629,
+        "forecastAttainmentPct": 92.23951444837382,
+        "forecastGap": -141058
+      }
+    },
+    {
+      "id": "gb",
+      "name": "United Kingdom",
+      "regionId": "eu",
+      "suppliedKpis": {
+        "revenue": 2068012,
+        "growthPct": 8.8,
+        "sharePct": 14.0,
+        "forecastAttainmentPct": 94.3,
+        "status": "at_risk",
+        "anomalies": []
+      },
+      "calculatedLatest": {
+        "actual": 2068011,
+        "forecast": 2185608,
+        "priorYear": 1901132,
+        "units": 9405,
+        "growthPct": 8.777875497335263,
+        "forecastAttainmentPct": 94.6194834572348,
+        "forecastGap": -117597
+      }
+    },
+    {
+      "id": "fr",
+      "name": "France",
+      "regionId": "eu",
+      "suppliedKpis": {
+        "revenue": 1607657,
+        "growthPct": 11.6,
+        "sharePct": 25.7,
+        "forecastAttainmentPct": 96.4,
+        "status": "at_risk",
+        "anomalies": []
+      },
+      "calculatedLatest": {
+        "actual": 1607657,
+        "forecast": 1663149,
+        "priorYear": 1440219,
+        "units": 7234,
+        "growthPct": 11.625870787706582,
+        "forecastAttainmentPct": 96.66343785193028,
+        "forecastGap": -55492
+      }
+    },
+    {
+      "id": "it",
+      "name": "Italy",
+      "regionId": "eu",
+      "suppliedKpis": {
+        "revenue": 940564,
+        "growthPct": 0.3,
+        "sharePct": 28.9,
+        "forecastAttainmentPct": 93.0,
+        "status": "at_risk",
+        "anomalies": []
+      },
+      "calculatedLatest": {
+        "actual": 940564,
+        "forecast": 1002286,
+        "priorYear": 938039,
+        "units": 4295,
+        "growthPct": 0.26917857359876063,
+        "forecastAttainmentPct": 93.84187746810791,
+        "forecastGap": -61722
+      }
+    },
+    {
+      "id": "es",
+      "name": "Spain",
+      "regionId": "eu",
+      "suppliedKpis": {
+        "revenue": 764563,
+        "growthPct": -4.6,
+        "sharePct": 18.1,
+        "forecastAttainmentPct": 104.5,
+        "status": "off_track",
+        "anomalies": []
+      },
+      "calculatedLatest": {
+        "actual": 764562,
+        "forecast": 730119,
+        "priorYear": 801198,
+        "units": 3478,
+        "growthPct": -4.572652452951709,
+        "forecastAttainmentPct": 104.71745016908203,
+        "forecastGap": 34443
+      }
+    },
+    {
+      "id": "jp",
+      "name": "Japan",
+      "regionId": "apac",
+      "suppliedKpis": {
+        "revenue": 2909297,
+        "growthPct": 9.7,
+        "sharePct": 26.1,
+        "forecastAttainmentPct": 104.0,
+        "status": "on_track",
+        "anomalies": []
+      },
+      "calculatedLatest": {
+        "actual": 2909296,
+        "forecast": 2792800,
+        "priorYear": 2653079,
+        "units": 13314,
+        "growthPct": 9.657345295786524,
+        "forecastAttainmentPct": 104.17129762245776,
+        "forecastGap": 116496
+      }
+    },
+    {
+      "id": "cn",
+      "name": "China",
+      "regionId": "apac",
+      "suppliedKpis": {
+        "revenue": 3776883,
+        "growthPct": 18.2,
+        "sharePct": 37.2,
+        "forecastAttainmentPct": 106.0,
+        "status": "on_track",
+        "anomalies": []
+      },
+      "calculatedLatest": {
+        "actual": 3776883,
+        "forecast": 3541947,
+        "priorYear": 3194396,
+        "units": 17118,
+        "growthPct": 18.234652184638357,
+        "forecastAttainmentPct": 106.63296204036932,
+        "forecastGap": 234936
+      }
+    },
+    {
+      "id": "in",
+      "name": "India",
+      "regionId": "apac",
+      "suppliedKpis": {
+        "revenue": 1885146,
+        "growthPct": 7.0,
+        "sharePct": 26.6,
+        "forecastAttainmentPct": 103.1,
+        "status": "on_track",
+        "anomalies": []
+      },
+      "calculatedLatest": {
+        "actual": 1885147,
+        "forecast": 1809961,
+        "priorYear": 1762433,
+        "units": 8594,
+        "growthPct": 6.962761137586515,
+        "forecastAttainmentPct": 104.15401215827302,
+        "forecastGap": 75186
+      }
+    },
+    {
+      "id": "au",
+      "name": "Australia",
+      "regionId": "apac",
+      "suppliedKpis": {
+        "revenue": 920230,
+        "growthPct": 2.4,
+        "sharePct": 9.4,
+        "forecastAttainmentPct": 101.8,
+        "status": "on_track",
+        "anomalies": []
+      },
+      "calculatedLatest": {
+        "actual": 920230,
+        "forecast": 906546,
+        "priorYear": 899020,
+        "units": 4202,
+        "growthPct": 2.359235612110955,
+        "forecastAttainmentPct": 101.50946559799503,
+        "forecastGap": 13684
+      }
+    },
+    {
+      "id": "br",
+      "name": "Brazil",
+      "regionId": "latam",
+      "suppliedKpis": {
+        "revenue": 1115100,
+        "growthPct": 2.0,
+        "sharePct": 15.0,
+        "forecastAttainmentPct": 96.0,
+        "status": "at_risk",
+        "anomalies": []
+      },
+      "calculatedLatest": {
+        "actual": 1115100,
+        "forecast": 1167349,
+        "priorYear": 1093487,
+        "units": 5100,
+        "growthPct": 1.9765209828740637,
+        "forecastAttainmentPct": 95.52413202906756,
+        "forecastGap": -52249
+      }
+    },
+    {
+      "id": "mx",
+      "name": "Mexico",
+      "regionId": "latam",
+      "suppliedKpis": {
+        "revenue": 806396,
+        "growthPct": 3.3,
+        "sharePct": 18.9,
+        "forecastAttainmentPct": 101.0,
+        "status": "on_track",
+        "anomalies": []
+      },
+      "calculatedLatest": {
+        "actual": 806395,
+        "forecast": 793575,
+        "priorYear": 780812,
+        "units": 3633,
+        "growthPct": 3.2764609150474078,
+        "forecastAttainmentPct": 101.61547427779354,
+        "forecastGap": 12820
+      }
+    }
+  ],
+  "germanyEarly2026": {
+    "2026-01": {
+      "actual": 1727009,
+      "forecast": 1864685,
+      "priorYear": 1800708,
+      "units": 7831,
+      "growthPct": -4.092779062457652,
+      "forecastAttainmentPct": 92.6166617954239,
+      "forecastGap": -137676
+    },
+    "2026-02": {
+      "actual": 1664879,
+      "forecast": 1828243,
+      "priorYear": 1797459,
+      "units": 7544,
+      "growthPct": -7.375967963664265,
+      "forecastAttainmentPct": 91.06442633719915,
+      "forecastGap": -163364
+    },
+    "2026-03": {
+      "actual": 1211930,
+      "forecast": 1314025,
+      "priorYear": 1757641,
+      "units": 5524,
+      "growthPct": -31.04792161766823,
+      "forecastAttainmentPct": 92.23036091398565,
+      "forecastGap": -102095
+    },
+    "2026-04": {
+      "actual": 1657974,
+      "forecast": 1797590,
+      "priorYear": 1793376,
+      "units": 7545,
+      "growthPct": -7.550117766714848,
+      "forecastAttainmentPct": 92.23315661524597,
+      "forecastGap": -139616
+    },
+    "2026-05": {
+      "actual": 1676586,
+      "forecast": 1817644,
+      "priorYear": 1857237,
+      "units": 7618,
+      "growthPct": -9.726868461052629,
+      "forecastAttainmentPct": 92.23951444837382,
+      "forecastGap": -141058
+    }
+  }
+}
