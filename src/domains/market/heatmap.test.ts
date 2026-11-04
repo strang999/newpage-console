@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import raw from "@/data/starter/data.json";
-import { buildHeatmap, classifyGap, datasetSchema, describeCell, formatGapPts, HEATMAP_BOUNDS, HEATMAP_CLASSES, metricsFor } from "./index";
+import { buildHeatmap, classifyGap, datasetSchema, describeCell, displayOneDecimal, formatGapPts, HEATMAP_BOUNDS, HEATMAP_CLASSES, metricsFor } from "./index";
 
 const dataset = datasetSchema.parse(raw);
 const audit = JSON.parse(readFileSync(new URL("../../../docs/data-audit.json", import.meta.url), "utf8")) as {
@@ -88,7 +88,7 @@ describe("independent recompute from the raw series (not via the domain's own he
         const e = sums.get(`${row.marketId}|${period}`);
         if (!e) throw new Error("missing cell");
         const gap = (e.a / e.f - 1) * 100;
-        const shown = Math.round(gap * 10) / 10;
+        const shown = displayOneDecimal(gap);
         const expectedClass = bounds.filter((b) => shown >= b).length;
         const c = h.cells[ri]?.[ci];
         expect(c?.gapPts, `${row.marketId} ${period}`).toBeCloseTo(gap, 9);
@@ -118,7 +118,7 @@ describe("classification", () => {
     expect(HEATMAP_BOUNDS).toEqual([-6, -2, 2, 6]);
     const labelBounds = HEATMAP_CLASSES.slice(1).map((c) => Number(/^([−+]?\d+)/.exec(c.label)?.[1]?.replace("−", "-")));
     expect(labelBounds).toEqual([-6, -2, 2, 6]);
-    const shownAt = (v: number) => Math.round(v * 10) / 10;
+    const shownAt = displayOneDecimal;
     for (const v of [-9, -6.06, -6.04, -6, -2.06, -2.04, -2, -0.4, 0, 1.94, 1.96, 2, 5.94, 5.96, 6, 9]) {
       expect(classifyGap(v), String(v)).toBe(labelBounds.filter((b) => shownAt(v) >= b).length);
     }

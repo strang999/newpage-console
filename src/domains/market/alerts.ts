@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { marketRows, type MarketRow } from "./metrics";
+import { displayOneDecimal } from "./rounding";
 import type { Dataset } from "./schema";
 
 /** Explicit business bounds (percent). Growth below -50% or above +100%, attainment outside 50-150%, is not a sensible alert. */
@@ -17,7 +18,12 @@ export type AlertMetric = z.infer<typeof alertMetricSchema>;
  */
 export const alertRuleInputSchema = z
   .object({
-    name: z.string().trim().min(2, "Name must be at least 2 characters").max(60, "Name must be 60 characters or fewer"),
+    name: z
+      .string()
+      .trim()
+      .max(60, "Name must be 60 characters or fewer")
+      // Zero-width and format characters (U+200B ...) survive trim(): count only characters a person can see.
+      .refine((n) => n.replace(/[\p{Cf}\p{Z}\s]/gu, "").length >= 2, "Name must be at least 2 characters"),
     scope: z.enum(["all", "selected"]),
     marketIds: z.array(z.string()),
     metric: alertMetricSchema,
@@ -27,6 +33,11 @@ export const alertRuleInputSchema = z
   .superRefine((rule, ctx) => {
     if (rule.scope === "selected" && rule.marketIds.length === 0) {
       ctx.addIssue({ code: "custom", path: ["marketIds"], message: "Select at least one market" });
+    }
+    if (Number.isFinite(rule.threshold) && Math.abs(rule.threshold * 10 - Math.round(rule.threshold * 10)) > 1e-9) {
+      // The UI shows one decimal; a finer threshold could flag a market whose displayed value equals it.
+      ctx.addIssue({ code: "custom", path: ["threshold"], message: "Use at most one decimal place" });
+      return;
     }
     const { min, max } = THRESHOLD_BOUNDS[rule.metric];
     if (Number.isFinite(rule.threshold) && (rule.threshold < min || rule.threshold > max)) {
@@ -44,8 +55,8 @@ export type AlertRule = AlertRuleInput & { id: string; createdAt: string };
 
 export const alertRuleSchema = alertRuleInputSchema.and(z.object({ id: z.string().min(1), createdAt: z.string() }));
 
-/** Rounded to the one decimal the UI shows, so a market never flags at a value that displays equal to its threshold. */
-const shown = (v: number) => Math.round(v * 10) / 10;
+/** The one decimal the UI shows (see rounding.ts), so a market never flags at a value that displays equal to its threshold. */
+const shown = displayOneDecimal;
 
 export type RuleEvaluation = {
   row: MarketRow;

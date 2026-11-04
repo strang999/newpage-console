@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { formatPercent } from "@/shared/lib/format";
 import raw from "@/data/starter/data.json";
-import { alertRuleInputSchema, alertRuleSchema, datasetSchema, evaluateRule, THRESHOLD_BOUNDS, unknownMarketIds, type AlertRuleInput } from "./index";
+import { alertRuleInputSchema, alertRuleSchema, datasetSchema, displayOneDecimal, evaluateRule, THRESHOLD_BOUNDS, unknownMarketIds, type AlertRuleInput } from "./index";
 
 const dataset = datasetSchema.parse(raw);
 const valid: AlertRuleInput = { name: "Europe watch", scope: "all", marketIds: [], metric: "attainment", threshold: 95, enabled: true };
@@ -58,6 +59,55 @@ describe("alertRuleInputSchema", () => {
   it("a stored rule needs an id and a timestamp", () => {
     expect(alertRuleSchema.safeParse({ ...valid, id: "a1", createdAt: "2026-11-04T00:00:00Z" }).success).toBe(true);
     expect(alertRuleSchema.safeParse(valid).success).toBe(false);
+  });
+});
+
+describe("names and thresholds that look valid but are not", () => {
+  it.each([
+    ["two zero-width spaces", "\u200b\u200b"],
+    ["zero-width joiners and a letter", "\u200d\u200da"],
+    ["only no-break and em spaces", "\u00a0\u2003\u00a0"],
+  ])("a name of %s is rejected as having fewer than 2 visible characters", (_n, name) => {
+    expect(issues({ ...valid, name })).toEqual(["name: Name must be at least 2 characters"]);
+  });
+
+  it("accepts names with accents, emoji and CJK; 60 code points is the limit", () => {
+    for (const name of ["\u00c9volution Ouest", "Ventes \ud83d\udcc9 Europe", "\u6b27\u6d32\u9884\u8b66"]) expect(issues({ ...valid, name }), name).toEqual([]);
+    expect(issues({ ...valid, name: "\ud83d\udcc9".repeat(60) })).toEqual([]);
+    expect(issues({ ...valid, name: "\ud83d\udcc9".repeat(61) })).toEqual(["name: Name must be 60 characters or fewer"]);
+  });
+
+  it.each([92.24, 92.21, 99.99999999, 70.05, 60.15])("a threshold of %s has more than one decimal and is rejected", (threshold) => {
+    expect(issues({ ...valid, threshold })).toEqual(["threshold: Use at most one decimal place"]);
+  });
+
+  it.each([92.2, 95, 100.0, 50, 150, 70.1, 99.9])("a threshold of %s (one decimal at most) is accepted", (threshold) => {
+    expect(issues({ ...valid, threshold })).toEqual([]);
+  });
+
+  it("0.1 steps that are not exact in binary (0.1 + 0.2, 1.1, 92.3) are still accepted", () => {
+    for (const threshold of [0.1 + 0.2, 1.1, 92.3, 7.7]) expect(issues({ ...valid, metric: "growth", threshold })).toEqual([]);
+  });
+});
+
+describe("displayOneDecimal matches what the UI prints, including negative ties", () => {
+  it.each([
+    [-2.25, -2.3],
+    [2.25, 2.3],
+    [-0.05, -0.1],
+    [-0.04, 0],
+    [-12.75, -12.8],
+    [92.2395, 92.2],
+    [0, 0],
+  ])("%s -> %s", (input, shown) => expect(displayOneDecimal(input)).toBe(shown));
+
+  it("agrees with formatPercent for every value on a 0.05 grid from -30 to +30 (ties included)", () => {
+    for (let i = -600; i <= 600; i++) {
+      const v = i * 0.05;
+      const shown = displayOneDecimal(v);
+      const printed = `${shown < 0 ? "\u2212" : ""}${Math.abs(shown).toFixed(1)}%`;
+      expect(printed, String(v)).toBe(formatPercent(v));
+    }
   });
 });
 

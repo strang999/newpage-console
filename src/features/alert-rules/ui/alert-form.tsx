@@ -8,6 +8,19 @@ import { formatPercent } from "@/shared/lib/format";
 
 const DEFAULTS: Partial<AlertRuleInput> = { name: "", scope: "all", marketIds: [], metric: "attainment", enabled: true };
 
+/** Whether what is in the form now is still exactly what was submitted (so a confirmed save may clear it). */
+function sameDraft(now: Partial<AlertRuleInput>, submitted: AlertRuleInput): boolean {
+  const ids = (list: readonly string[] | undefined) => [...(list ?? [])].sort().join(",");
+  return (
+    (now.name ?? "").trim() === submitted.name.trim() &&
+    now.scope === submitted.scope &&
+    now.metric === submitted.metric &&
+    now.threshold === submitted.threshold &&
+    now.enabled === submitted.enabled &&
+    (submitted.scope === "all" || ids(now.marketIds) === ids(submitted.marketIds))
+  );
+}
+
 const inputClass = "rounded-sm border bg-surface px-2 py-1.5 text-sm aria-[invalid=true]:border-[var(--color-status-off-track)]";
 const inputStyle = { borderColor: "var(--color-border-strong)" } as const;
 
@@ -30,8 +43,14 @@ function Error({ id, message }: { id: string; message?: string }) {
 export function AlertForm({ dataset, saving, onSave }: { dataset: Dataset; saving: boolean; onSave: (rule: AlertRuleInput, onConfirmed: () => void) => void }) {
   const id = useId();
   const form = useForm<AlertRuleInput>({ resolver: zodResolver(alertRuleInputSchema), defaultValues: DEFAULTS, mode: "onTouched" });
-  const { register, handleSubmit, formState, control, reset } = form;
+  const { register, handleSubmit, formState, control, reset, getValues, trigger, getFieldState } = form;
   const errors = formState.errors;
+
+  // The bounds depend on the metric. With onTouched validation a radio change would not re-validate the threshold, so a stale
+  // bounds error could linger (or a newly invalid value go unflagged): re-check it whenever it has a value or an error.
+  const revalidateThreshold = () => {
+    if (Number.isFinite(getValues("threshold")) || getFieldState("threshold").error) void trigger("threshold");
+  };
 
   const values = useWatch({ control });
   const scope = values.scope ?? "all";
@@ -43,11 +62,15 @@ export function AlertForm({ dataset, saving, onSave }: { dataset: Dataset; savin
   const bounds = THRESHOLD_BOUNDS[metric];
 
   const submit = handleSubmit((input) => {
-    onSave({ ...input, name: input.name.trim(), marketIds: input.scope === "all" ? [] : input.marketIds }, () => reset(DEFAULTS));
+    if (saving) return;
+    // Clear the form only if the user has not started a different draft while the save was in flight.
+    onSave({ ...input, name: input.name.trim(), marketIds: input.scope === "all" ? [] : input.marketIds }, () => {
+      if (sameDraft(getValues(), input)) reset(DEFAULTS);
+    });
   });
 
   return (
-    <form onSubmit={submit} noValidate aria-labelledby={`${id}-title`} className="flex flex-col gap-4">
+    <form onSubmit={(e) => (saving ? e.preventDefault() : void submit(e))} noValidate aria-labelledby={`${id}-title`} className="flex flex-col gap-4">
       <h3 id={`${id}-title`} className="text-base font-semibold">
         New alert rule
       </h3>
@@ -103,10 +126,10 @@ export function AlertForm({ dataset, saving, onSave }: { dataset: Dataset; savin
           <legend className="text-sm font-medium">Metric</legend>
           <div className="mt-1 flex gap-4 text-sm">
             <label className="flex items-center gap-1.5">
-              <input type="radio" value="attainment" {...register("metric")} /> Forecast attainment
+              <input type="radio" value="attainment" {...register("metric", { onChange: revalidateThreshold })} /> Forecast attainment
             </label>
             <label className="flex items-center gap-1.5">
-              <input type="radio" value="growth" {...register("metric")} /> YoY growth
+              <input type="radio" value="growth" {...register("metric", { onChange: revalidateThreshold })} /> YoY growth
             </label>
           </div>
         </fieldset>
@@ -164,9 +187,8 @@ export function AlertForm({ dataset, saving, onSave }: { dataset: Dataset; savin
       <div className="flex items-center gap-3">
         <button
           type="submit"
-          disabled={saving}
           aria-disabled={saving}
-          className="rounded-sm px-4 py-2 text-sm font-semibold disabled:opacity-60"
+          className="rounded-sm px-4 py-2 text-sm font-semibold aria-disabled:opacity-60"
           style={{ background: "var(--color-accent)", color: "var(--color-accent-contrast)" }}
         >
           {saving ? "Saving…" : "Save rule"}

@@ -143,14 +143,14 @@ describe("optimistic save", () => {
     expect(rows()[0]).toHaveAttribute("data-pending", "true");
     expect(within(rows()[0] as HTMLElement).getByText("Saving…")).toBeInTheDocument();
     expect(window.localStorage.getItem(KEY)).toBeNull();
-    expect(save()).toBeDisabled();
+    expect(save()).toHaveAttribute("aria-disabled", "true");
     expect(server.calls).toEqual([{ op: "create", name: "Europe watch" }]);
 
     server.release();
     await waitFor(() => expect(rows()[0]).not.toHaveAttribute("data-pending"));
     expect(alertRepository.load().map((r) => r.name)).toEqual(["Europe watch"]);
     expect(name()).toHaveValue(""); // confirmed: the form is reset
-    expect(save()).toBeEnabled();
+    expect(save()).toHaveAttribute("aria-disabled", "false");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
@@ -282,8 +282,9 @@ describe("rule list: toggle, delete, persistence", () => {
     renderRules();
     await screen.findByText("failing rule", { selector: "p" });
     await userEvent.click(screen.getByRole("button", { name: "Delete failing rule" }));
-    expect(rows().map((r) => r.textContent)).not.toContain(expect.stringContaining("failing rule"));
     expect(rows()).toHaveLength(1); // gone at once
+    expect(rows()[0]).toHaveTextContent("Spain watch");
+    expect(rows()[0]).not.toHaveTextContent("failing rule");
     server.release();
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't delete “failing rule”");
     await waitFor(() => expect(rows()).toHaveLength(2)); // restored
@@ -295,11 +296,14 @@ describe("rule list: toggle, delete, persistence", () => {
     seed("Europe watch");
     renderRules();
     await userEvent.click(await screen.findByRole("switch", { name: "Europe watch: enabled" }));
-    expect(screen.getByRole("switch", { name: "Europe watch: enabled" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Delete Europe watch" })).toBeDisabled();
-    expect(save()).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "Europe watch: enabled" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("button", { name: "Delete Europe watch" })).toHaveAttribute("aria-disabled", "true");
+    expect(save()).toHaveAttribute("aria-disabled", "true");
+    // a click on an aria-disabled control does nothing
+    await userEvent.click(screen.getByRole("button", { name: "Delete Europe watch" }));
+    expect(server.calls).toHaveLength(1);
     server.release();
-    await waitFor(() => expect(screen.getByRole("button", { name: "Delete Europe watch" })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Delete Europe watch" })).toHaveAttribute("aria-disabled", "false"));
   });
 
   it("after a reload only committed rules are there: the failed one never appears", async () => {

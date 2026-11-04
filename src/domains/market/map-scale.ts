@@ -1,4 +1,5 @@
 import { formatPercent, formatUsdCompact } from "@/shared/lib/format";
+import { displayOneDecimal } from "./rounding";
 import type { MarketRow } from "./metrics";
 import { STATUS_META } from "./status";
 import type { MarketStatus } from "./schema";
@@ -24,7 +25,7 @@ export type MapScale = {
 const STATUS_ORDER: readonly MarketStatus[] = ["on_track", "at_risk", "off_track"];
 
 /** Classification uses the value rounded to the one decimal shown in the UI, so a market never sits in a class its label contradicts. */
-const display = (v: number) => Math.round(v * 10) / 10;
+const display = displayOneDecimal;
 
 function binned(value: number | null, lowerBounds: readonly number[]): number | null {
   if (value === null) return null;

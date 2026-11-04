@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import raw from "@/data/starter/data.json";
-import { buildMapScale, datasetSchema, marketRows, type MapMetric, type MarketRow } from "./index";
+import { buildMapScale, datasetSchema, displayOneDecimal, marketRows, type MapMetric, type MarketRow } from "./index";
 
 const dataset = datasetSchema.parse(raw);
 const rows = marketRows(dataset, dataset.meta.latestPeriod);
@@ -74,7 +74,7 @@ function boundsFromLabels(labels: readonly string[]): number[] {
     .map((l) => /^(\u2212?\d+)%/.exec(l)?.[1])
     .map((n) => Number((n ?? "").replace("\u2212", "-")));
 }
-const displayed = (v: number) => Math.round(v * 10) / 10;
+const displayed = displayOneDecimal;
 const withMetrics = (row: MarketRow, patch: Partial<MarketRow["metrics"]>): MarketRow => ({ ...row, metrics: { ...row.metrics, ...patch } });
 
 describe("class boundaries agree with the legend labels", () => {

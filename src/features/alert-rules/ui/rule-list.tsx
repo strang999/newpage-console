@@ -57,14 +57,14 @@ export function RuleList({
                 role="switch"
                 aria-checked={rule.enabled}
                 aria-label={`${rule.name}: enabled`}
-                disabled={busy}
-                onClick={() => onToggle(rule)}
-                className="relative h-6 w-11 rounded-full border transition-colors disabled:opacity-50"
+                aria-disabled={busy}
+                onClick={() => !busy && onToggle(rule)}
+                className="relative h-6 w-11 rounded-full border transition-colors aria-disabled:opacity-50"
                 style={{ borderColor: "var(--color-border-strong)", background: rule.enabled ? "var(--color-accent)" : "var(--color-surface-sunken)" }}
               >
                 <span className={`absolute top-0.5 h-4.5 w-4.5 rounded-full bg-white shadow transition-all ${rule.enabled ? "left-[22px]" : "left-0.5"}`} style={{ height: 18, width: 18 }} />
               </button>
-              <button type="button" disabled={busy} onClick={() => onDelete(rule)} aria-label={`Delete ${rule.name}`} className="rounded-sm border px-2.5 py-1 text-sm disabled:opacity-50" style={{ borderColor: "var(--color-border-strong)" }}>
+              <button type="button" aria-disabled={busy} onClick={() => !busy && onDelete(rule)} aria-label={`Delete ${rule.name}`} className="rounded-sm border px-2.5 py-1 text-sm aria-disabled:opacity-50" style={{ borderColor: "var(--color-border-strong)" }}>
                 Delete
               </button>
             </div>

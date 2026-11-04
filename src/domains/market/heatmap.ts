@@ -1,6 +1,7 @@
 import { metricsFromFacts } from "./metrics";
 import type { Dataset, Fact } from "./schema";
 import { formatPeriodLabel } from "./period";
+import { displayOneDecimal } from "./rounding";
 
 /** Lower bounds, in percentage points versus forecast. Fixed so the colours mean the same thing in every period and region. */
 export const HEATMAP_BOUNDS = [-6, -2, 2, 6] as const;
@@ -30,7 +31,7 @@ export type Heatmap = {
   cells: HeatmapCell[][];
 };
 
-const displayed = (v: number) => Math.round(v * 10) / 10;
+const displayed = displayOneDecimal;
 
 export function classifyGap(gapPts: number | null): number | null {
   if (gapPts === null) return null;

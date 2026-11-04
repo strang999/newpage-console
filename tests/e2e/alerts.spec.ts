@@ -27,7 +27,7 @@ test("a valid rule appears at once as Saving…, is confirmed, survives a reload
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toHaveAttribute("data-pending", "true");
   await expect(rows(page).first()).toContainText("Saving…");
-  await expect(section(page).getByRole("button", { name: "Saving…" })).toBeDisabled();
+  await expect(section(page).getByRole("button", { name: "Saving…" })).toHaveAttribute("aria-disabled", "true");
   expect(await page.evaluate(() => window.localStorage.getItem("market-console.alert-rules.v1"))).toBeNull();
 
   // Confirmed after the mock latency.
@@ -123,7 +123,7 @@ test("toggle and delete are optimistic and persistent", async ({ page }) => {
   await expect(toggle).toBeChecked();
   await toggle.click();
   await expect(toggle).not.toBeChecked(); // instant
-  await expect(toggle).toBeDisabled(); // no overlapping writes while it is in flight
+  await expect(toggle).toHaveAttribute("aria-disabled", "true"); // no overlapping writes while it is in flight (focus is kept)
   await expect(rows(page).first()).not.toHaveAttribute("data-pending", "true", { timeout: 5000 });
   await page.reload();
   await expect(section(page).getByRole("switch", { name: "Europe watch: enabled" })).not.toBeChecked();
@@ -132,7 +132,8 @@ test("toggle and delete are optimistic and persistent", async ({ page }) => {
   await section(page).getByRole("button", { name: "Delete Europe watch" }).click();
   await expect(rows(page)).toHaveCount(0); // gone at once
   await expect(section(page).getByText(/No rules yet/)).toBeVisible();
-  await page.waitForTimeout(1000);
+  // the server confirms after its latency; storage is emptied only then
+  await expect.poll(() => page.evaluate(() => JSON.parse(window.localStorage.getItem("market-console.alert-rules.v1") ?? "[]").length), { timeout: 5000 }).toBe(0);
   await page.reload();
   await expect(rows(page)).toHaveCount(0);
 });
@@ -161,4 +162,62 @@ test("the form works on a phone: stacked layout, no horizontal overflow, keyboar
   await section(page).getByRole("spinbutton", { name: /Alert when below/ }).press("Enter");
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).not.toHaveAttribute("data-pending", "true", { timeout: 5000 });
+});
+
+const seeded = (name: string) =>
+  JSON.stringify([{ id: "seed-1", createdAt: "2026-11-04T00:00:00.000Z", name, scope: "all", marketIds: [], metric: "attainment", threshold: 95, enabled: true }]);
+
+test("a failed toggle flips back and a failed delete brings the rule back, against the real endpoint", async ({ page }) => {
+  // A rule that is already stored but whose name makes the mock server reject any change to it.
+  await page.addInitScript((value) => {
+    if (!window.localStorage.getItem("market-console.alert-rules.v1")) window.localStorage.setItem("market-console.alert-rules.v1", value);
+  }, seeded("failing rule"));
+  await gotoReady(page, "/?mode=analyst");
+  await expect(rows(page)).toHaveCount(1);
+
+  const toggle = section(page).getByRole("switch", { name: "failing rule: enabled" });
+  await expect(toggle).toBeChecked();
+  await toggle.click();
+  await expect(toggle).not.toBeChecked(); // optimistic
+  const alert = section(page).getByRole("alert");
+  await expect(alert).toContainText("Couldn't disable “failing rule”", { timeout: 5000 });
+  await expect(alert).toContainText("The change was undone");
+  await expect(alert).toBeFocused(); // a keyboard user is brought to the explanation
+  await expect(section(page).getByRole("switch", { name: "failing rule: enabled" })).toBeChecked(); // rolled back
+  expect(await page.evaluate(() => JSON.parse(window.localStorage.getItem("market-console.alert-rules.v1") ?? "[]")[0].enabled)).toBe(true);
+
+  await alert.getByRole("button", { name: "Dismiss" }).click();
+  await section(page).getByRole("button", { name: "Delete failing rule" }).click();
+  await expect(rows(page)).toHaveCount(0); // optimistic: gone at once
+  await expect(section(page).getByRole("alert")).toContainText("Couldn't delete “failing rule”", { timeout: 5000 });
+  await expect(rows(page)).toHaveCount(1); // restored
+  expect(await page.evaluate(() => JSON.parse(window.localStorage.getItem("market-console.alert-rules.v1") ?? "[]").length)).toBe(1);
+});
+
+test("rules saved in another tab of the same browser show up without a reload", async ({ page, context }) => {
+  await gotoReady(page, "/?mode=analyst");
+  await expect(section(page).getByText(/No rules yet/)).toBeVisible();
+  const other = await context.newPage();
+  await gotoReady(other, "/?mode=analyst");
+  await fill(other, "From the other tab", "95");
+  await section(other).getByRole("button", { name: "Save rule" }).click();
+  await expect(rows(other).first()).not.toHaveAttribute("data-pending", "true", { timeout: 5000 });
+  await expect(rows(page)).toHaveCount(1); // via the storage event
+  await expect(rows(page).first()).toContainText("From the other tab");
+});
+
+test("a double Enter sends one write", async ({ page }) => {
+  let posts = 0;
+  await page.route("**/api/alerts", (route) => {
+    posts += 1;
+    return route.continue();
+  });
+  await gotoReady(page, "/?mode=analyst");
+  await fill(page, "Once only", "95");
+  const threshold = section(page).getByRole("spinbutton", { name: /Alert when below/ });
+  await threshold.press("Enter");
+  await threshold.press("Enter");
+  await expect(rows(page).first()).not.toHaveAttribute("data-pending", "true", { timeout: 5000 });
+  expect(posts).toBe(1);
+  await expect(rows(page)).toHaveCount(1);
 });
