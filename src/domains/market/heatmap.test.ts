@@ -69,6 +69,50 @@ describe("buildHeatmap", () => {
   });
 });
 
+describe("independent recompute from the raw series (not via the domain's own helpers)", () => {
+  const sums = new Map<string, { a: number; f: number }>();
+  for (const r of raw.series) {
+    const k = `${r.marketId}|${r.period}`;
+    const e = sums.get(k) ?? { a: 0, f: 0 };
+    e.a += r.actual;
+    e.f += r.forecast;
+    sums.set(k, e);
+  }
+  const bounds = [-6, -2, 2, 6];
+  const h = buildHeatmap(dataset, { regionId: null });
+
+  it("all 312 cells: gap and class equal an independent raw-sum computation", () => {
+    let checked = 0;
+    for (const [ri, row] of h.rows.entries()) {
+      for (const [ci, period] of h.periods.entries()) {
+        const e = sums.get(`${row.marketId}|${period}`);
+        if (!e) throw new Error("missing cell");
+        const gap = (e.a / e.f - 1) * 100;
+        const shown = Math.round(gap * 10) / 10;
+        const expectedClass = bounds.filter((b) => shown >= b).length;
+        const c = h.cells[ri]?.[ci];
+        expect(c?.gapPts, `${row.marketId} ${period}`).toBeCloseTo(gap, 9);
+        expect(c?.cls, `${row.marketId} ${period} ${shown}`).toBe(expectedClass);
+        checked += 1;
+      }
+    }
+    expect(checked).toBe(312);
+  });
+
+  it("pins the extremes and the near-bound cells", () => {
+    const flat = h.cells.flat();
+    const min = flat.reduce((a, b) => ((a.gapPts ?? 0) < (b.gapPts ?? 0) ? a : b));
+    const max = flat.reduce((a, b) => ((a.gapPts ?? 0) > (b.gapPts ?? 0) ? a : b));
+    expect([min.marketId, min.period, Math.round((min.gapPts ?? 0) * 10) / 10]).toEqual(["de", "2024-10", -9.2]);
+    expect([max.marketId, max.period, Math.round((max.gapPts ?? 0) * 10) / 10]).toEqual(["cn", "2025-07", 7.2]);
+    expect(cell(h, "gb", "2026-03").cls).toBe(1); // -6.04 displays -6.0: belongs to "-6 to under -2"
+    expect(cell(h, "ca", "2024-09").cls).toBe(3); // +1.997 displays +2.0: belongs to "+2 to under +6"
+    expect(cell(h, "au", "2024-11").cls).toBe(3);
+    expect(cell(h, "cn", "2024-10").cls).toBe(4); // +6.01 displays +6.0: belongs to "+6 pts and above"
+    expect(flat.map((c) => c.cls).filter((c) => c === 0)).toHaveLength(56);
+  });
+});
+
 describe("classification", () => {
   it("classifies on the displayed one-decimal value at every bound, and the bounds are the ones the legend states", () => {
     expect(HEATMAP_BOUNDS).toEqual([-6, -2, 2, 6]);

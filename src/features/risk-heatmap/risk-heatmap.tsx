@@ -35,6 +35,14 @@ export function RiskHeatmap({
 
   // Roving tabindex: exactly one cell is a tab stop. It defaults to the selected cell, else the selected period's column.
   const [active, setActive] = useState<{ r: number; c: number } | null>(null);
+  // The tab stop follows the selection: when the region, the selected market or the period changes, forget where the
+  // user last moved and fall back to the selected cell. (Adjusting state during render, not in an effect.)
+  const anchor = `${regionId}|${selectedMarket}|${period}`;
+  const [seenAnchor, setSeenAnchor] = useState(anchor);
+  if (anchor !== seenAnchor) {
+    setSeenAnchor(anchor);
+    setActive(null);
+  }
   const last = { r: heatmap.rows.length - 1, c: heatmap.periods.length - 1 };
   const current = {
     r: Math.min(active?.r ?? Math.max(0, selectedRow), last.r),
@@ -49,7 +57,10 @@ export function RiskHeatmap({
   }
 
   function onKeyDown(event: KeyboardEvent, r: number, c: number) {
+    // Alt+Arrow is browser Back/Forward, Ctrl+PageUp/PageDown switches tabs, Shift+Arrow extends selections: never swallow them.
+    if (event.altKey || event.shiftKey) return;
     const ctrl = event.ctrlKey || event.metaKey;
+    if (ctrl && event.key !== "Home" && event.key !== "End") return;
     const moves: Record<string, { r: number; c: number } | undefined> = {
       ArrowRight: { r, c: c + 1 },
       ArrowLeft: { r, c: c - 1 },
@@ -112,9 +123,10 @@ export function RiskHeatmap({
                         }}
                         tabIndex={isTabStop ? 0 : -1}
                         aria-label={describeCell(row.name, cell)}
-                        aria-pressed={selected}
-                        onClick={() => {
+                        onClick={(e) => {
                           setActive({ r, c });
+                          // The press did not focus the cell (see onMouseDown); focus it now, without scrolling, so the arrow keys continue from here.
+                          e.currentTarget.focus({ preventScroll: true });
                           onSelect({ market: cell.marketId, period: cell.period });
                         }}
                         // A pointer press must not move focus: focusing a cell next to the sticky market column scrolls the grid

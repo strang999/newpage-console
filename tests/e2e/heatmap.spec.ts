@@ -15,6 +15,8 @@ test("coordinated views: map click -> heatmap cell -> time series marker, radar 
   await gotoReady(page, "/?compareType=market&compare=de,it,gb");
   await expect(countries(page)).toHaveCount(13);
   await expect(heat(page).getByRole("gridcell")).toHaveCount(13 * 24);
+  await expect(page.locator("text.recharts-label")).toHaveText("May 2026"); // the marker starts at the latest period
+  const markerBefore = Number(await page.locator(".recharts-reference-line-line").first().getAttribute("x1"));
 
   // 1. Map: pick Germany. The heatmap narrows to Europe's five markets (it does not collapse to one row).
   await page.getByRole("button", { name: /^Germany:/ }).click();
@@ -31,12 +33,14 @@ test("coordinated views: map click -> heatmap cell -> time series marker, radar 
 
   // 3. Time series: the summary and the selected-period marker moved to March 2026.
   await expect(page.getByText(/Germany, Mar 2026:/)).toBeVisible();
-  await expect(page.locator(".recharts-reference-line")).toHaveCount(1);
+  await expect(page.locator("text.recharts-label")).toHaveText("Mar 2026"); // ...and moved with the selection
+  const markerAfter = Number(await page.locator(".recharts-reference-line-line").first().getAttribute("x1"));
+  expect(markerAfter).toBeLessThan(markerBefore - 20); // two months to the left of the latest period
   // 4. Radar: the values follow the same period.
   await expect(page.getByRole("table", { name: /Raw revenue/ }).getByRole("row", { name: /Germany/ })).toContainText("$1,211,930");
   // 5. Map and the selected heat cell reflect the selection.
   await expect(page.getByRole("button", { name: /^Germany:.*selected/ })).toBeVisible();
-  await expect(cell(page, "Germany", "Mar 2026")).toHaveAttribute("aria-pressed", "true");
+  await expect(cell(page, "Germany", "Mar 2026").locator("xpath=..")).toHaveAttribute("aria-selected", "true");
   await expect(heat(page).locator("td[aria-selected='true']")).toHaveCount(1);
 
   await shot(page, `docs/evidence/P6/coordinated-${testInfo.project.name}.png`, { fullPage: true });
@@ -65,6 +69,30 @@ test("keyboard: arrows move through the grid, Enter selects, there is one tab st
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\?region=eu&market=fr&period=2026-04$/);
   await expect(h1(page)).toHaveText("France");
+});
+
+test("after a mouse click the arrow keys continue from that cell, and a focused selected cell keeps its selection ring", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile", "keyboard continuity is a desktop concern");
+  await gotoReady(page, "/?region=eu");
+  await cell(page, "Germany", "Mar 2026").click();
+  await expect(page).toHaveURL(/market=de&period=2026-03/);
+  await expect(cell(page, "Germany", "Mar 2026")).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.locator(":focus")).toHaveAccessibleName(/^Germany, Apr 2026/);
+  await page.keyboard.press("ArrowLeft");
+  await expect(page.locator(":focus")).toHaveAccessibleName(/^Germany, Mar 2026/);
+  const shadow = await page.locator(":focus").evaluate((el) => getComputedStyle(el).boxShadow);
+  expect(shadow).toContain("inset"); // the selection ring survives while the cell is focused
+  expect(shadow.split("inset").length - 1).toBe(2);
+});
+
+test("Alt+ArrowLeft in the grid still goes back in the browser history", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile");
+  await gotoReady(page, "/?region=eu");
+  await cell(page, "Germany", "Mar 2026").click();
+  await expect(page).toHaveURL(/period=2026-03/);
+  await page.keyboard.press("Alt+ArrowLeft");
+  await expect(page).not.toHaveURL(/period=2026-03/);
 });
 
 test("the heatmap grid has no axe violations and a visible keyboard focus indicator", async ({ page }, testInfo) => {

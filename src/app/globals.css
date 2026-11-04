@@ -92,6 +92,10 @@ body {
   outline: 3px solid var(--color-text);
   box-shadow: 0 0 0 2px #fff;
 }
+/* Same specificity as the two rules above, so compose them: a selected cell that is also focused keeps both cues. */
+.heat-cell[data-selected]:focus-visible {
+  box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 4.5px var(--color-text), 0 0 0 2px #fff;
+}
 @media (forced-colors: active) {
   .heat-cell:focus-visible {
     outline-color: Highlight;
