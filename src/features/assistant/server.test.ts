@@ -62,6 +62,8 @@ describe("route hardening", () => {
   it("trims the question before matching", async () => {
     const res = await post(JSON.stringify({ question: "   germany   " }));
     expect(res.status).toBe(200);
+    // Not draining the body would leave this stream running into later tests, whose fake timers it would then pollute.
+    await res.body?.cancel();
   });
 });
 
@@ -122,5 +124,30 @@ describe("overridden fixtures keep the starter's kind, confidence and protocol",
     const streamed = events.filter((e) => e.type === "token").map((e) => e.value).join("");
     expect(streamed).toBe(overrides.overrides.find((o) => o.id === id)?.answer.text);
     expect(streamed).not.toBe(original.answer.text);
+  });
+});
+
+describe("resumeFrom (mock-only resume)", () => {
+  const stream = async (body: unknown) => {
+    const res = await POST(new Request("http://test/api/chat", { method: "POST", body: JSON.stringify(body) }));
+    const text = await res.text();
+    return text.split("\n\n").filter(Boolean).map((f) => JSON.parse(f.replace(/^data: /, "")) as { type: string; value?: string });
+  };
+
+  it("skips the tokens the client already has and streams exactly the rest, then done", async () => {
+    const full = await stream({ question: "next year" });
+    const fullTokens = full.filter((e) => e.type === "token").map((e) => e.value ?? "");
+    const rest = await stream({ question: "next year", resumeFrom: 5 });
+    expect(rest.filter((e) => e.type === "token").map((e) => e.value)).toEqual(fullTokens.slice(5));
+    expect(rest.at(-1)?.type).toBe("done");
+    expect(fullTokens.slice(0, 5).join("") + rest.filter((e) => e.type === "token").map((e) => e.value).join("")).toBe(fullTokens.join(""));
+  });
+
+  it("resuming past the end just finishes with done; a negative or fractional offset is a 400", async () => {
+    expect((await stream({ question: "summary", resumeFrom: 9999 })).map((e) => e.type)).toEqual(["done"]);
+    for (const resumeFrom of [-1, 1.5, "3"]) {
+      const res = await POST(new Request("http://test/api/chat", { method: "POST", body: JSON.stringify({ question: "summary", resumeFrom }) }));
+      expect(res.status).toBe(400);
+    }
   });
 });

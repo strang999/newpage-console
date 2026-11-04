@@ -179,7 +179,7 @@ test("an abstention shows 'Can't answer from this data' and no confidence level"
   await expect(notice).not.toContainText(/confidence/i);
 });
 
-test("reloading keeps the conversation: a finished answer stays complete, one cut off mid-stream comes back interrupted and can be retried", async ({ page }, testInfo) => {
+test("reloading keeps the conversation, and an answer cut off mid-stream continues from where it stopped", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === "mobile");
   await gotoReady(page, "/");
   await composer(page).fill("Which markets are at risk?");
@@ -189,17 +189,24 @@ test("reloading keeps the conversation: a finished answer stays complete, one cu
   await composer(page).fill("Give me a full portfolio summary");
   await page.getByRole("button", { name: "Send" }).click();
   const text = answer(page).locator("p.whitespace-pre-wrap").first();
-  await expect.poll(async () => (await text.textContent())?.length ?? 0).toBeGreaterThan(10);
+  await expect.poll(async () => (await text.textContent())?.length ?? 0).toBeGreaterThan(30);
+  const beforeReload = ((await text.textContent()) ?? "").trim();
 
   await page.reload();
   await page.locator('[data-hydrated="true"]').waitFor();
   const articles = page.getByRole("article", { name: "Assistant answer" });
   await expect(articles).toHaveCount(2);
   await expect(articles.first().getByText("Answer complete.")).toBeVisible();
-  await expect(articles.last().getByText(/ended before it finished\. Evidence is unavailable/)).toBeVisible();
-  expect(((await articles.last().locator("p.whitespace-pre-wrap").first().textContent()) ?? "").length).toBeGreaterThan(5);
 
-  await articles.last().getByRole("button", { name: /Retry/ }).click();
-  await expect(articles.last().getByText("Answer complete.")).toBeVisible({ timeout: 20_000 });
+  // The cut-off answer carries on by itself: same message, finishes, and starts with what was already there.
+  await expect(articles.last().getByText("Answer complete.")).toBeVisible({ timeout: 30_000 });
+  const finished = ((await articles.last().locator("p.whitespace-pre-wrap").first().textContent()) ?? "").trim();
+  expect(finished.startsWith(beforeReload.slice(0, 30))).toBe(true);
+  expect(finished.length).toBeGreaterThan(beforeReload.length);
+  expect(finished).toContain("Here's the portfolio at a glance");
+  expect((finished.match(/Here's the portfolio at a glance/g) ?? []).length).toBe(1); // not restarted, not duplicated
+  await expect(articles.last().getByText("Earlier attempt")).toHaveCount(0);
   await expect(articles).toHaveCount(2);
+  // metadata only arrived with the final event
+  await expect(articles.last().getByText(/confidence/i).first()).toBeVisible();
 });

@@ -32,6 +32,8 @@ export type AttemptTimeouts = { firstEventMs: number; idleMs: number };
 
 export type AttemptOptions = {
   question: string;
+  /** Tokens already received: the mock endpoint skips them and streams the rest (a mock-only capability, see README). */
+  resumeFrom?: number;
   /** The caller's signal (user Stop, unmount, overall deadline). Distinct from this attempt's own timeouts. */
   signal: AbortSignal;
   timeouts?: AttemptTimeouts;
@@ -89,7 +91,7 @@ export async function runAttempt(options: AttemptOptions): Promise<AttemptResult
 }
 
 async function attemptCore(
-  { question, onToken, fetchImpl = fetch, endpoint = "/api/chat" }: AttemptOptions,
+  { question, resumeFrom, onToken, fetchImpl = fetch, endpoint = "/api/chat" }: AttemptOptions,
   signal: AbortSignal,
   onActivity: () => void,
 ): Promise<AttemptResult> {
@@ -101,7 +103,7 @@ async function attemptCore(
     response = await fetchImpl(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-      body: JSON.stringify({ question }),
+      body: JSON.stringify(resumeFrom ? { question, resumeFrom } : { question }),
       signal,
     });
   } catch {

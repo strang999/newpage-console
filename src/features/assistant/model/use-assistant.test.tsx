@@ -68,25 +68,46 @@ describe("useAssistant", () => {
     cancel.mockRestore();
   });
 
-  it("a reload mid-answer restores the question and the partial text as interrupted, and Retry starts a new attempt", async () => {
+  it("a reload mid-answer continues the same answer: the partial text stays, the request says where to resume, the rest is appended", async () => {
     const first = stubStream();
     const a = renderHook(() => useAssistant());
     act(() => a.result.current.ask("what is at risk?"));
     await waitFor(() => expect(first.signal()).toBeDefined());
-    first.push(frame({ type: "token", value: "Six markets " }));
-    await waitFor(() => expect(a.result.current.state.messages[0]?.text).toBe("Six markets "));
+    first.push(frame({ type: "token", value: "Six markets " }) + frame({ type: "token", value: "are " }));
+    await waitFor(() => expect(a.result.current.state.messages[0]?.text).toBe("Six markets are "));
     window.dispatchEvent(new Event("pagehide")); // what the browser fires on reload
     a.unmount();
 
     const second = stubStream();
     const b = renderHook(() => useAssistant());
-    await waitFor(() => expect(b.result.current.state.messages).toHaveLength(1));
-    expect(b.result.current.state.messages[0]).toMatchObject({ question: "what is at risk?", text: "Six markets ", status: "incomplete", meta: null });
-    act(() => b.result.current.retry(b.result.current.state.messages[0]?.id ?? ""));
     await waitFor(() => expect(second.signal()).toBeDefined());
-    const message = b.result.current.state.messages[0];
-    expect(message?.attemptId).not.toBe(a.result.current.state.messages[0]?.attemptId);
-    expect(message?.prior).toHaveLength(1);
+    const body = JSON.parse(String(second.fetchMock.mock.calls[0]?.[1]?.body)) as { question: string; resumeFrom: number };
+    expect(body).toEqual({ question: "what is at risk?", resumeFrom: 3 });
+    expect(b.result.current.state.messages).toHaveLength(1);
+    expect(b.result.current.state.messages[0]).toMatchObject({ text: "Six markets are ", status: "connecting", meta: null });
+    second.push(frame({ type: "token", value: "flagged." }) + frame({ type: "done", kind: "normal", citations: [], confidence: "high" }));
+    second.close();
+    await waitFor(() => expect(b.result.current.state.messages[0]?.status).toBe("complete"));
+    expect(b.result.current.state.messages[0]?.text).toBe("Six markets are flagged.");
+    expect(b.result.current.state.messages[0]?.prior).toEqual([]);
+  });
+
+  it("a stopped answer is not resumed on reload; it stays stopped with its Retry", async () => {
+    const first = stubStream();
+    const a = renderHook(() => useAssistant());
+    act(() => a.result.current.ask("q"));
+    await waitFor(() => expect(first.signal()).toBeDefined());
+    first.push(frame({ type: "token", value: "partial " }));
+    await waitFor(() => expect(a.result.current.state.messages[0]?.text).toBe("partial "));
+    act(() => a.result.current.stop());
+    await waitFor(() => expect(a.result.current.state.messages[0]?.status).toBe("stopped"));
+    window.dispatchEvent(new Event("pagehide"));
+    a.unmount();
+
+    const second = stubStream();
+    const b = renderHook(() => useAssistant());
+    await waitFor(() => expect(b.result.current.state.messages[0]?.status).toBe("stopped"));
+    expect(second.fetchMock).not.toHaveBeenCalled();
   });
 
   it("a second ask while one is running is ignored", async () => {

@@ -27,6 +27,8 @@ export const initialState: AssistantState = { messages: [] };
 export type Action =
   | { type: "asked"; id: string; question: string; attemptId: string }
   | { type: "retried"; id: string; attemptId: string }
+  /** Continues an interrupted answer after a reload: same text, new attempt, streaming picks up where it stopped. */
+  | { type: "resumed"; id: string; attemptId: string }
   | { type: "retrying"; id: string; attemptId: string; retry: number }
   | { type: "tokens"; id: string; attemptId: string; text: string }
   | { type: "completed"; id: string; attemptId: string; meta: DoneMeta }
@@ -72,6 +74,8 @@ export function reducer(state: AssistantState, action: Action): AssistantState {
               : m.prior
             : m.prior,
       }));
+    case "resumed":
+      return update(state, action.id, (m) => ({ ...m, attemptId: action.attemptId, status: "connecting", meta: null, failure: null, autoRetries: 0 }));
     case "retrying":
       return whileActive(state, action.id, action.attemptId, (m) => (m.status === "connecting" ? { ...m, autoRetries: action.retry } : m));
     case "tokens":

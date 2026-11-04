@@ -17,6 +17,7 @@ import { z } from "zod";
 import fixtures from "@/data/starter/fixtures.json";
 import overrides from "@/data/overrides/fixtures.local.json";
 import { lookupAnswer } from "./lookup";
+import { tokenize } from "./model/tokens";
 
 type Fixture = {
   id: string;
@@ -52,7 +53,10 @@ function pickFixture(question: string): Fixture {
 }
 
 const TOKEN_DELAY_MS = 35;
-const requestSchema = z.object({ question: z.string().trim().min(1, "question is required").max(500, "question is too long (500 characters max)") });
+const requestSchema = z.object({ question: z.string().trim().min(1, "question is required").max(500, "question is too long (500 characters max)"),
+  /** Tokens the client already has (mock-only resume): they are skipped, the rest is streamed. */
+  resumeFrom: z.number().int().min(0).max(10_000).optional(),
+});
 
 function badRequest(message: string) {
   return Response.json({ error: message }, { status: 400, headers: { "Cache-Control": "no-store" } });
@@ -69,6 +73,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? "Invalid request.");
 
   const fixture = pickFixture(parsed.data.question);
+  const resumeFrom = parsed.data.resumeFrom ?? 0;
   const encoder = new TextEncoder();
   const send = (obj: unknown) => encoder.encode(`data: ${JSON.stringify(obj)}
 
@@ -120,7 +125,7 @@ export async function POST(req: Request) {
       }
 
       // Stream the answer one whitespace-delimited token at a time.
-      const tokens = fixture.answer.text.match(/\S+\s*/g) ?? [];
+      const tokens = tokenize(fixture.answer.text).slice(resumeFrom);
       for (const value of tokens) {
         if (stopped) return;
         controller.enqueue(send({ type: "token", value }));

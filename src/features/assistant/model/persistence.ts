@@ -24,6 +24,8 @@ const messageSchema = z.object({
   failure: failureSchema.nullable(),
   autoRetries: z.number(),
   prior: z.array(z.object({ attemptId: z.string(), text: z.string(), status: z.enum(["stopped", "error", "incomplete"]) })),
+  /** Still running when the page went away: the one message that may be resumed on the next load. */
+  interrupted: z.boolean().optional(),
 });
 const storedSchema = z.object({ v: z.literal(1), messages: z.array(messageSchema) });
 
@@ -36,22 +38,33 @@ function settle(message: Message): Message {
   return message.status === "connecting" || message.status === "streaming" ? { ...message, status: "incomplete", meta: null, failure: null } : message;
 }
 
+const isActive = (m: Message) => m.status === "connecting" || m.status === "streaming";
+
 export function saveConversation(messages: Message[]): void {
   try {
-    sessionStorage.setItem(KEY, JSON.stringify({ v: 1, messages: messages.slice(-MAX_MESSAGES).map(settle) }));
+    const stored = messages.slice(-MAX_MESSAGES).map((m) => ({ ...settle(m), ...(isActive(m) ? { interrupted: true } : {}) }));
+    sessionStorage.setItem(KEY, JSON.stringify({ v: 1, messages: stored }));
   } catch {
     /* storage blocked or full: the conversation just will not survive a reload */
   }
 }
 
-export function loadConversation(): Message[] {
+/** `resume` is the message that was streaming when the page went away, if any: the caller may continue it. */
+export function loadConversation(): { messages: Message[]; resume: Message | null } {
   try {
     const raw = sessionStorage.getItem(KEY);
-    if (!raw) return [];
+    if (!raw) return { messages: [], resume: null };
     const parsed = storedSchema.safeParse(JSON.parse(raw));
-    return parsed.success ? parsed.data.messages.map(settle) : [];
+    if (!parsed.success) return { messages: [], resume: null };
+    const messages = parsed.data.messages.map((stored) => {
+      const message = { ...stored };
+      delete message.interrupted;
+      return settle(message);
+    });
+    const flagged = parsed.data.messages.findLast((m) => m.interrupted);
+    return { messages, resume: messages.find((m) => m.id === flagged?.id) ?? null };
   } catch {
-    return [];
+    return { messages: [], resume: null };
   }
 }
 

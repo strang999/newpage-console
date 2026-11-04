@@ -5,6 +5,7 @@ import { track } from "@/shared/observability";
 import type { AttemptResult } from "../stream/consume";
 import { runGeneration } from "../stream/generate";
 import { loadConversation, maxIdNumber, saveConversation } from "./persistence";
+import { tokenize } from "./tokens";
 import { initialState, isActive, reducer, type AssistantState } from "./reducer";
 
 type Run = { id: string; attemptId: string; controller: AbortController };
@@ -41,7 +42,7 @@ export function useAssistant(): {
   }, []);
 
   const start = useCallback(
-    async (run: Run, question: string) => {
+    async (run: Run, question: string, resumeFrom = 0) => {
       current.current = run;
       pending.current = { text: "", frame: 0 };
       const startedAt = performance.now();
@@ -51,6 +52,7 @@ export function useAssistant(): {
       try {
         result = await runGeneration({
           question,
+          resumeFrom,
           signal: run.controller.signal,
           onRetrying: (retry) => {
             retries = retry;
@@ -133,12 +135,20 @@ export function useAssistant(): {
   // Restore this tab's conversation after a reload (in an effect: the server render and first client render are empty).
   const restored = useRef(false);
   useEffect(() => {
-    const saved = loadConversation();
-    if (saved.length) {
-      counter.current = Math.max(counter.current, maxIdNumber(saved));
-      dispatch({ type: "restored", messages: saved });
+    const { messages, resume } = loadConversation();
+    if (messages.length) {
+      counter.current = Math.max(counter.current, maxIdNumber(messages));
+      dispatch({ type: "restored", messages });
+      // An answer that was streaming when the page went away continues where it stopped (the mock endpoint skips the
+      // tokens already received). Anything else interrupted stays "interrupted" with a manual Retry.
+      if (resume && !current.current) {
+        const run: Run = { id: resume.id, attemptId: nextId("a"), controller: new AbortController() };
+        dispatch({ type: "resumed", id: run.id, attemptId: run.attemptId });
+        void start(run, resume.question, tokenize(resume.text).length);
+      }
     }
     restored.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once on mount; start and nextId are stable
   }, []);
 
   // Keep the stored copy current: trailing write while tokens stream, immediate write when the page is being hidden.
