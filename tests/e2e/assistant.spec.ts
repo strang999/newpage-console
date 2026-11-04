@@ -44,7 +44,7 @@ test("Stop mid-answer keeps the partial text and labels evidence unavailable", a
 
 test("the supplied error fixture shows an error with retry, and the dashboard stays usable", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === "mobile");
-  await gotoReady(page, "/");
+  await gotoReady(page, "/?mode=analyst");
   await composer(page).fill("force error");
   await page.getByRole("button", { name: "Send" }).click();
   await expect(answer(page).getByRole("alert")).toBeVisible();
@@ -56,7 +56,7 @@ test("the supplied error fixture shows an error with retry, and the dashboard st
 test("when /api/chat is down the dashboard works and the chat shows a failure with retry", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === "mobile");
   await page.route("**/api/chat", (route) => route.fulfill({ status: 503, body: "unavailable" }));
-  await gotoReady(page, "/");
+  await gotoReady(page, "/?mode=analyst");
   await composer(page).fill("germany");
   await page.getByRole("button", { name: "Send" }).click();
   await expect(answer(page).getByRole("alert")).toContainText("HTTP 503");

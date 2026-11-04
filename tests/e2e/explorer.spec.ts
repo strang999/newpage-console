@@ -10,23 +10,23 @@ test("drill three levels, pick a period, reload restores the view, back walks th
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
   page.on("pageerror", (e) => errors.push(e.message));
 
-  await gotoReady(page, "/");
+  await gotoReady(page, "/?mode=analyst");
   await expect(h1(page)).toHaveText("Portfolio overview");
 
   await children(page).getByRole("button", { name: "Europe" }).click();
-  await expect(page).toHaveURL(/\?region=eu$/);
+  await expect(page).toHaveURL(/\?mode=analyst&region=eu$/);
   await expect(h1(page)).toHaveText("Europe");
 
   await children(page).getByRole("button", { name: "Germany" }).click();
-  await expect(page).toHaveURL(/\?region=eu&market=de$/);
+  await expect(page).toHaveURL(/\?mode=analyst&region=eu&market=de$/);
   await expect(h1(page)).toHaveText("Germany");
 
   await children(page).getByRole("button", { name: "Veltrix" }).click();
-  await expect(page).toHaveURL(/\?region=eu&market=de&product=veltrix$/);
+  await expect(page).toHaveURL(/\?mode=analyst&region=eu&market=de&product=veltrix$/);
   await expect(h1(page)).toHaveText("Germany · Veltrix");
 
   await page.getByRole("combobox", { name: "Period" }).selectOption("2026-03");
-  await expect(page).toHaveURL(/\?region=eu&market=de&product=veltrix&period=2026-03$/);
+  await expect(page).toHaveURL(/\?mode=analyst&region=eu&market=de&product=veltrix&period=2026-03$/);
   await expect(page.getByText(/Germany · Veltrix, Mar 2026:/)).toBeVisible();
 
   // Shared link: the exact view is restored from the URL alone.
@@ -42,12 +42,12 @@ test("drill three levels, pick a period, reload restores the view, back walks th
 
   // Back walks every discrete selection in reverse.
   await page.goBack();
-  await expect(page).toHaveURL(/\?region=eu&market=de&product=veltrix$/);
+  await expect(page).toHaveURL(/\?mode=analyst&region=eu&market=de&product=veltrix$/);
   await page.goBack();
-  await expect(page).toHaveURL(/\?region=eu&market=de$/);
+  await expect(page).toHaveURL(/\?mode=analyst&region=eu&market=de$/);
   await expect(h1(page)).toHaveText("Germany");
   await page.goBack();
-  await expect(page).toHaveURL(/\?region=eu$/);
+  await expect(page).toHaveURL(/\?mode=analyst&region=eu$/);
   await expect(h1(page)).toHaveText("Europe");
   await page.goBack();
   await expect(h1(page)).toHaveText("Portfolio overview");

@@ -3,7 +3,7 @@ import { formatPercent, formatPeriod, formatUsdCompact, formatUsdExact } from "@
 
 function Kpi({ label, value, note, title }: { label: string; value: string; note: string; title?: string }) {
   return (
-    <div className="rounded-md border border-border bg-surface p-4 shadow-[var(--shadow-card)]">
+    <div className="card">
       <dt className="text-sm text-muted">{label}</dt>
       <dd className="mt-1 text-3xl font-semibold tabular-nums tracking-tight" title={title}>
         {value}

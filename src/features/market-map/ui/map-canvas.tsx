@@ -45,7 +45,7 @@ export default function MapCanvas({
   };
 
   return (
-    <ComposableMap projection="geoEqualEarth" projectionConfig={{ scale: 150 }} width={800} height={410} className="block h-auto w-full">
+    <ComposableMap projection="geoEqualEarth" projectionConfig={{ scale: 150, center: [0, -2] }} width={800} height={372} className="block h-auto w-full">
       {patterns.defs}
       <Geographies geography={topology as unknown as GeoJsonObject}>
         {({ geographies }) => {

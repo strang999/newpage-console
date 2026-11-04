@@ -70,7 +70,7 @@ export function MarketComparison({
   const entityWord = draft.type === "market" ? "markets" : "regions";
 
   return (
-    <section aria-labelledby={`${name}-title`} className="rounded-md border border-border bg-surface p-4">
+    <section aria-labelledby={`${name}-title`} className="card">
       <h2 id={`${name}-title`} className="text-lg font-semibold">
         Compare {entityWord}
       </h2>

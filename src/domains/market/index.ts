@@ -27,3 +27,5 @@ export { buildComparison } from "./comparison";
 export type { AxisId, Comparison, ComparisonAxis, ComparisonEntity } from "./comparison";
 export { buildHeatmap, classifyGap, describeCell, formatGapPts, HEATMAP_BOUNDS, HEATMAP_CLASSES } from "./heatmap";
 export type { Heatmap, HeatmapCell } from "./heatmap";
+export { sortMarketRows, topMovers, topRisks } from "./highlights";
+export type { MoverItem, RiskItem, SortDirection, SortKey } from "./highlights";

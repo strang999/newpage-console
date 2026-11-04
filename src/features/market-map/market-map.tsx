@@ -58,7 +58,7 @@ export function MarketMap({
   }
 
   return (
-    <section aria-labelledby={`${name}-title`} className="rounded-md border border-border bg-surface p-4">
+    <section aria-labelledby={`${name}-title`} className="card">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 id={`${name}-title`} className="text-lg font-semibold">
@@ -99,12 +99,12 @@ export function MarketMap({
 
       {view === "map" ? (
         <>
-          <div className="mt-3 aspect-[800/410] w-full" role="group" aria-label={`Map of the ${rows.length} markets coloured by ${scale.title}. Countries without data are hatched. The table view has the same values.`}>
+          <div className="mt-3 aspect-[800/372] w-full" role="group" aria-label={`Map of the ${rows.length} markets coloured by ${scale.title}. Countries without data are hatched. The table view has the same values.`}>
             <Suspense fallback={<p className="p-4 text-sm text-muted">Loading map…</p>}>
               <MapCanvas rows={rows} scale={scale} selectedMarket={selectedMarket} focusedMarket={focusedMarket} onSelect={onSelectMarket} onHover={setHover} onFocusChange={setFocusedMarket} />
             </Suspense>
           </div>
-          <p className="mt-1 min-h-5 text-sm" data-testid="map-readout">
+          <p className="mt-1 min-h-[2.75rem] text-sm sm:min-h-6" data-testid="map-readout">
             {readoutText}
           </p>
         </>

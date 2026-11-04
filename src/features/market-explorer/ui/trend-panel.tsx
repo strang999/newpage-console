@@ -19,7 +19,7 @@ export function TrendPanel({ dataset, scope, period }: { dataset: Dataset; scope
   const month = formatPeriod(period);
 
   return (
-    <section aria-labelledby={headingId} className="rounded-md border border-border bg-surface p-4">
+    <section aria-labelledby={headingId} className="card">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id={headingId} className="text-lg font-semibold">
           Actual vs forecast vs prior year

@@ -79,7 +79,7 @@ export function RiskHeatmap({
   }
 
   return (
-    <div className="rounded-md border border-border bg-surface p-4">
+    <div className="card">
       <h2 id={`${name}-title`} className="text-lg font-semibold">
         Risk heatmap: {regionName ? `${regionName} markets` : "all markets"} by month
       </h2>

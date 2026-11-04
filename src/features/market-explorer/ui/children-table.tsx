@@ -22,7 +22,7 @@ export function ChildrenTable({
   const heading = HEADINGS[level];
 
   return (
-    <div className="rounded-md border border-border bg-surface p-4">
+    <div className="card">
       <h2 id="children-heading" className="text-lg font-semibold">
         {heading} <span className="text-sm font-normal text-muted">· select one to drill in</span>
       </h2>

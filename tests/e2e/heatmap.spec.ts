@@ -12,7 +12,7 @@ test("coordinated views: map click -> heatmap cell -> time series marker, radar 
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
   page.on("pageerror", (e) => errors.push(e.message));
 
-  await gotoReady(page, "/?compareType=market&compare=de,it,gb");
+  await gotoReady(page, "/?mode=analyst&compareType=market&compare=de,it,gb");
   await expect(countries(page)).toHaveCount(13);
   await expect(heat(page).getByRole("gridcell")).toHaveCount(13 * 24);
   await expect(page.locator("text.recharts-label")).toHaveText("May 2026"); // the marker starts at the latest period
@@ -26,7 +26,7 @@ test("coordinated views: map click -> heatmap cell -> time series marker, radar 
 
   // 2. Heatmap: pick Germany in March 2026.
   await cell(page, "Germany", "Mar 2026").click();
-  await expect(page).toHaveURL(/\?region=eu&market=de&period=2026-03&compareType=market&compare=de,it,gb$/);
+  await expect(page).toHaveURL(/\?mode=analyst&region=eu&market=de&period=2026-03&compareType=market&compare=de,it,gb$/);
   await expect(h1(page)).toHaveText("Germany");
   await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByText("Germany")).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("combobox", { name: "Period" })).toHaveValue("2026-03");
@@ -55,7 +55,7 @@ test("coordinated views: map click -> heatmap cell -> time series marker, radar 
 });
 
 test("keyboard: arrows move through the grid, Enter selects, there is one tab stop", async ({ page }) => {
-  await gotoReady(page, "/?region=eu&period=2026-03");
+  await gotoReady(page, "/?mode=analyst&region=eu&period=2026-03");
   await expect(heat(page).locator("button[tabindex='0']")).toHaveCount(1);
   await expect(heat(page).locator("button[tabindex='0']")).toHaveAccessibleName(/^Germany, Mar 2026/);
 
@@ -67,13 +67,13 @@ test("keyboard: arrows move through the grid, Enter selects, there is one tab st
   await expect(focused).toHaveAccessibleName("France, Apr 2026: 97.0% of forecast, 3.0 points under forecast");
   await expect(heat(page).locator("button[tabindex='0']")).toHaveCount(1);
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\?region=eu&market=fr&period=2026-04$/);
+  await expect(page).toHaveURL(/\?mode=analyst&region=eu&market=fr&period=2026-04$/);
   await expect(h1(page)).toHaveText("France");
 });
 
 test("after a mouse click the arrow keys continue from that cell, and a focused selected cell keeps its selection ring", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === "mobile", "keyboard continuity is a desktop concern");
-  await gotoReady(page, "/?region=eu");
+  await gotoReady(page, "/?mode=analyst&region=eu");
   await cell(page, "Germany", "Mar 2026").click();
   await expect(page).toHaveURL(/market=de&period=2026-03/);
   await expect(cell(page, "Germany", "Mar 2026")).toBeFocused();
@@ -86,17 +86,29 @@ test("after a mouse click the arrow keys continue from that cell, and a focused 
   expect(shadow.split("inset").length - 1).toBe(2);
 });
 
-test("Alt+ArrowLeft in the grid still goes back in the browser history", async ({ page }, testInfo) => {
+test("browser shortcuts are not swallowed by the grid (Alt+Arrow, Ctrl+PageDown, Shift+Arrow are not default-prevented)", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === "mobile");
-  await gotoReady(page, "/?region=eu");
-  await cell(page, "Germany", "Mar 2026").click();
-  await expect(page).toHaveURL(/period=2026-03/);
-  await page.keyboard.press("Alt+ArrowLeft");
-  await expect(page).not.toHaveURL(/period=2026-03/);
+  await gotoReady(page, "/?mode=analyst&region=eu");
+  // Synthetic key presses never trigger real browser Back in headless Chromium, so assert on the event itself.
+  const prevented = await cell(page, "Germany", "Mar 2026").evaluate((el) => {
+    const fire = (init: KeyboardEventInit) => {
+      const e = new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ...init });
+      el.dispatchEvent(e);
+      return e.defaultPrevented;
+    };
+    return {
+      altLeft: fire({ key: "ArrowLeft", altKey: true }),
+      altRight: fire({ key: "ArrowRight", altKey: true }),
+      ctrlPageDown: fire({ key: "PageDown", ctrlKey: true }),
+      shiftRight: fire({ key: "ArrowRight", shiftKey: true }),
+      plainRight: fire({ key: "ArrowRight" }),
+    };
+  });
+  expect(prevented).toEqual({ altLeft: false, altRight: false, ctrlPageDown: false, shiftRight: false, plainRight: true });
 });
 
 test("the heatmap grid has no axe violations and a visible keyboard focus indicator", async ({ page }, testInfo) => {
-  await gotoReady(page, "/?region=eu&market=de&period=2026-03");
+  await gotoReady(page, "/?mode=analyst&region=eu&market=de&period=2026-03");
   await cell(page, "Germany", "Mar 2026").focus();
   await page.keyboard.press("ArrowRight");
   const outline = await page.locator(":focus").evaluate((el) => {
@@ -113,7 +125,7 @@ test("the heatmap grid has no axe violations and a visible keyboard focus indica
 
 test("on a narrow screen the grid scrolls inside its own container and the page does not overflow", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile");
-  await gotoReady(page, "/");
+  await gotoReady(page, "/?mode=analyst");
   const box = await heat(page).evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth }));
   expect(box.scroll).toBeGreaterThan(box.client);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

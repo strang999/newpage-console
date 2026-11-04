@@ -10,7 +10,7 @@ test("pick three markets: the URL holds them, the radar table shows raw values, 
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
   page.on("pageerror", (e) => errors.push(e.message));
 
-  await gotoReady(page, "/");
+  await gotoReady(page, "/?mode=analyst");
   await section(page).getByRole("checkbox", { name: "Germany" }).check();
   await expect(page).not.toHaveURL(/compare/); // one is not a valid comparison, so nothing is written
   await expect(section(page).getByText("1 selected · select at least 2")).toBeVisible();
@@ -32,14 +32,14 @@ test("pick three markets: the URL holds them, the radar table shows raw values, 
 
   await page.getByRole("combobox", { name: "Period" }).selectOption("2026-03");
   await expect(table.getByRole("row", { name: /Germany/ })).toContainText("$1,211,930");
-  await expect(page).toHaveURL(/\?period=2026-03&compareType=market&compare=de,it,gb$/);
+  await expect(page).toHaveURL(/\?mode=analyst&period=2026-03&compareType=market&compare=de,it,gb$/);
 
   await shot(page, `docs/evidence/P5/comparison-${testInfo.project.name}.png`, { fullPage: true });
   expect(errors).toEqual([]);
 });
 
 test("regions can be compared, markets and regions are never mixed, and the fourth pick disables the rest", async ({ page }) => {
-  await gotoReady(page, "/");
+  await gotoReady(page, "/?mode=analyst");
   await section(page).locator("label", { hasText: "Regions" }).click();
   await section(page).getByRole("checkbox", { name: "Europe" }).check();
   await section(page).getByRole("checkbox", { name: "APAC" }).check();
@@ -55,17 +55,17 @@ test("regions can be compared, markets and regions are never mixed, and the four
 });
 
 test("invalid comparison URLs are normalised away; a valid link works without touching the picker", async ({ page }) => {
-  await gotoReady(page, "/?compareType=market&compare=de");
-  await expect(page).toHaveURL(/\/$/);
-  await gotoReady(page, "/?compareType=market&compare=de,eu");
-  await expect(page).toHaveURL(/\/$/);
-  await gotoReady(page, "/?compareType=region&compare=eu,apac,na");
+  await gotoReady(page, "/?mode=analyst&compareType=market&compare=de");
+  await expect(page).toHaveURL(/\?mode=analyst$/);
+  await gotoReady(page, "/?mode=analyst&compareType=market&compare=de,eu");
+  await expect(page).toHaveURL(/\?mode=analyst$/);
+  await gotoReady(page, "/?mode=analyst&compareType=region&compare=eu,apac,na");
   await expect(valuesTable(page).locator("tbody tr")).toHaveCount(3);
   await expect(section(page).getByRole("checkbox", { name: "North America" })).toBeChecked();
 });
 
 test("back and forward restore the comparison", async ({ page }) => {
-  await gotoReady(page, "/");
+  await gotoReady(page, "/?mode=analyst");
   await section(page).getByRole("button", { name: /Compare Germany, Italy and the United Kingdom/ }).click();
   await expect(page).toHaveURL(/compare=de,it,gb$/);
   await page.goBack();
@@ -77,7 +77,7 @@ test("back and forward restore the comparison", async ({ page }) => {
 });
 
 test("the comparison section has no axe violations and the radar keeps a text alternative", async ({ page }) => {
-  await gotoReady(page, "/?compareType=market&compare=de,it,gb");
+  await gotoReady(page, "/?mode=analyst&compareType=market&compare=de,it,gb");
   await expect(page.locator(".recharts-radar-polygon")).toHaveCount(3);
   await expect(page.getByRole("group", { name: /Radar chart comparing Germany, Italy, United Kingdom/ })).toBeVisible();
   await expect(page.getByText("Highest revenue: United Kingdom ($2,068,011); lowest: Italy ($940,564).")).toBeVisible();

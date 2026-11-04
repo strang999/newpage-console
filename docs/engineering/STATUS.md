@@ -15,7 +15,8 @@ Updated: 2026-11-03 (Asia/Bangkok). Execution plan: planning package `PLAN-STRIC
 
 | P4 / F04 map | done: review FAIL (4 defects, 3 incompletes) -> fixed: two-tone focus/selected overlay drawn above neighbours, per-status textures + legend, dark thin outlines, readout derived from current rows (hover and focus tracked separately), half-open legend labels, boundary tests over all 24 periods, shipped geometry tested, lazy chunk asserted. 231 tests, e2e 43 pass | `features/F04-map.md` |
 | P5 / F05 comparison | done: review FAIL (3 defects, 1 incomplete) -> fixed: missing value no longer plotted as 0, in-flight own-write tracking in the draft sync (two quick edits), echo-guard unit tests (mutation-checked), radar data tested, screenshots only with SCREENSHOTS=1 | `features/F05-comparison.md` |
-| P6 / F06 heatmap | implemented, locally verified; review pending | `features/F06-heatmap.md` |
+| P6 / F06 heatmap | done: review FAIL (4 defects, 4 incompletes) -> fixed (composed selection+focus ring, shortcuts not swallowed, tab stop follows selection, single selection semantics, independent 312-cell recompute, marker movement asserted, click-then-arrows) | `features/F06-heatmap.md` |
+| P7 / F07 audience | implemented, locally verified; review pending | `features/F07-audience.md` |
 
 ## Next concrete step
 

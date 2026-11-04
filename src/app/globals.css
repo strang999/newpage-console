@@ -15,6 +15,20 @@ html {
   color-scheme: light;
 }
 
+/* The one surface style for dashboard sections. */
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-4);
+}
+@media (min-width: 1024px) {
+  .card {
+    padding: var(--space-5);
+  }
+}
+
 body {
   margin: 0;
   background: var(--color-canvas);

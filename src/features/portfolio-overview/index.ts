@@ -1,1 +1,1 @@
-export { PortfolioOverview } from "./portfolio-overview";
+export { MarketsTable, PortfolioHealth, PortfolioOverview } from "./portfolio-overview";
