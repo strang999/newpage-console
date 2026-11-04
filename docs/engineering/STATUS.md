@@ -14,11 +14,12 @@ Updated: 2026-11-03 (Asia/Bangkok). Execution plan: planning package `PLAN-STRIC
 | P3c trust UI + single P3 review | review FAIL (4 defects, 2 incompletes) -> fixed: unsupported causal claim in the unchanged germany-dip fixture (now an override), duplicate error announcement, DEFAULT_POLICY untested, override figures not anchored per entity, hook unmount/flush and retry edge cases untested. 204 tests, e2e 27 pass | `docs/data-quality.md` |
 
 | P4 / F04 map | done: review FAIL (4 defects, 3 incompletes) -> fixed: two-tone focus/selected overlay drawn above neighbours, per-status textures + legend, dark thin outlines, readout derived from current rows (hover and focus tracked separately), half-open legend labels, boundary tests over all 24 periods, shipped geometry tested, lazy chunk asserted. 231 tests, e2e 43 pass | `features/F04-map.md` |
-| P5 / F05 comparison | implemented, locally verified; review pending | `features/F05-comparison.md` |
+| P5 / F05 comparison | done: review FAIL (3 defects, 1 incomplete) -> fixed: missing value no longer plotted as 0, in-flight own-write tracking in the draft sync (two quick edits), echo-guard unit tests (mutation-checked), radar data tested, screenshots only with SCREENSHOTS=1 | `features/F05-comparison.md` |
+| P6 / F06 heatmap | implemented, locally verified; review pending | `features/F06-heatmap.md` |
 
 ## Next concrete step
 
-P6 heatmap, P7 executive/analyst (+ layout and visual polish pass), P8 alerts, P9 hardening, P10 release.
+P7 executive/analyst (+ layout and visual polish pass), P8 alerts, P9 hardening, P10 release.
 
 ## Known gaps / limitations
 

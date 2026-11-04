@@ -25,3 +25,5 @@ export type { MapScale, ScaleKind } from "./map-scale";
 export { STATUS_META } from "./status";
 export { buildComparison } from "./comparison";
 export type { AxisId, Comparison, ComparisonAxis, ComparisonEntity } from "./comparison";
+export { buildHeatmap, classifyGap, describeCell, formatGapPts, HEATMAP_BOUNDS, HEATMAP_CLASSES } from "./heatmap";
+export type { Heatmap, HeatmapCell } from "./heatmap";

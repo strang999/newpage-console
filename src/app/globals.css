@@ -74,3 +74,26 @@ body {
   stroke: var(--color-text);
   stroke-width: 1.4;
 }
+
+/* Heatmap cells: selected = inset two-tone ring; keyboard focus = a dark outline with a white halo, so the two never look alike. */
+.heat-cell {
+  cursor: pointer;
+  outline: 2px solid transparent;
+  outline-offset: 1px;
+}
+.heat-cell:hover {
+  box-shadow: inset 0 0 0 2px var(--color-text-muted);
+}
+.heat-cell[data-selected] {
+  box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 4.5px var(--color-text);
+}
+.heat-cell:focus-visible {
+  position: relative;
+  outline: 3px solid var(--color-text);
+  box-shadow: 0 0 0 2px #fff;
+}
+@media (forced-colors: active) {
+  .heat-cell:focus-visible {
+    outline-color: Highlight;
+  }
+}

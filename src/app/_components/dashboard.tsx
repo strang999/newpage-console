@@ -5,6 +5,7 @@ import { AssistantPanel } from "@/features/assistant";
 import { MarketExplorer } from "@/features/market-explorer";
 import { MarketComparison } from "@/features/market-comparison";
 import { MarketMap } from "@/features/market-map";
+import { RiskHeatmap } from "@/features/risk-heatmap";
 import { PortfolioOverview } from "@/features/portfolio-overview";
 import { useViewState } from "../_url/use-view-state";
 import { useDataset } from "./dataset-query";
@@ -52,6 +53,13 @@ function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof use
         selectedMarket={state.market}
         onMetricChange={(metric) => navigate({ metric })}
         onSelectMarket={(market) => navigate({ market })}
+      />
+      <RiskHeatmap
+        dataset={dataset}
+        regionId={state.region}
+        selectedMarket={state.market}
+        period={state.period}
+        onSelect={({ market, period }) => navigate({ market, period })}
       />
       <MarketComparison
         dataset={dataset}

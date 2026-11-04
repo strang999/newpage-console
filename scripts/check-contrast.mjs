@@ -28,6 +28,12 @@ const pairs = [
   ["color-status-at-risk", "color-status-at-risk-soft", 4.5],
   ["color-status-off-track", "color-status-off-track-soft", 4.5],
   ["color-status-neutral", "color-status-neutral-soft", 4.5],
+  // text on the diverging scale cells (heatmap): white on the dark ends, dark text on the light classes
+  ["color-surface", "scale-div-0", 4.5],
+  ["color-surface", "scale-div-4", 4.5],
+  ["color-text", "scale-div-1", 4.5],
+  ["color-text", "scale-div-2", 4.5],
+  ["color-text", "scale-div-3", 4.5],
   ["color-border-strong", "color-surface", 3],
   ["color-ai-border", "color-surface", 3],
   ["color-focus", "color-surface", 3],
