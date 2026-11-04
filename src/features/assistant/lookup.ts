@@ -33,8 +33,9 @@ function findEntities(question: string, d: Dataset): Scope[] {
   const products = d.products.filter((p) => wordRe(p.name).test(q));
   for (const mk of d.markets) {
     const terms = [mk.name, mk.iso3, ...(MARKET_ALIASES[mk.id] ?? [])];
-    // Two-letter codes are deliberately not matched: "IT", "IN" and "US" are ordinary words (and "IT" is not Italy).
-    const m = terms.map((t) => wordRe(t).exec(q)).find(Boolean);
+    // Two-letter codes are deliberately not matched: "IT" and "IN" are ordinary words (and "IT" is not Italy).
+    // "US" counts only in capitals: lower-case "us" is the pronoun.
+    const m = terms.map((t) => wordRe(t).exec(q)).find(Boolean) ?? (mk.id === "us" ? /(?<![\p{L}\p{N}])US(?![\p{L}\p{N}])/u.exec(q) : null);
     if (!m) continue;
     if (products.length === 0) hits.push({ scope: { marketId: mk.id, regionId: mk.regionId }, at: m.index });
     else for (const p of products) hits.push({ scope: { marketId: mk.id, regionId: mk.regionId, productId: p.id }, at: m.index });

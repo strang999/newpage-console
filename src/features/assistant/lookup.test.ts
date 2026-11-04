@@ -29,6 +29,10 @@ describe("lookupAnswer", () => {
     expect(a?.text).toContain(name);
   });
 
+  it("capital US is the United States, and both markets of 'japan vs US' are answered", () => {
+    expect(lookupAnswer("so what data you got for japan US")?.citations.map((c) => c.marketId)).toEqual(["jp", "us"]);
+  });
+
   it("a region is cited by region, and 'North America' is not also read as the United States", () => {
     const a = lookupAnswer("show North America");
     expect(a?.citations).toEqual([{ regionId: "na", period: "2026-05" }]);
@@ -48,7 +52,8 @@ describe("lookupAnswer", () => {
   it("ordinary words that look like country codes are not entities", () => {
     expect(lookupAnswer("is it in the data and what is it")).toBeNull();
     expect(lookupAnswer("what is IT")).toBeNull(); // IT as in information technology, not Italy
-    expect(lookupAnswer("IN or US?")).toBeNull();
+    expect(lookupAnswer("IN or us?")).toBeNull();
+    expect(lookupAnswer("tell us about it")).toBeNull();
     expect(lookupAnswer("hello")).toBeNull();
     expect(lookupAnswer("🙂")).toBeNull();
   });
