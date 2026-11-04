@@ -212,6 +212,19 @@ describe("trust surface", () => {
     expect(snapshot).toHaveTextContent("Revenue fell 27% versus the prior month.");
   });
 
+  it("the AI label points at the evidence once an answer cites data, and keeps 'not source data' otherwise", async () => {
+    stubAnswer({ kind: "normal", citations: [{ marketId: "de", period: "2026-03", label: "Germany, March dip" }], confidence: "high" });
+    const { unmount } = render(<AssistantPanel />);
+    await ask("germany");
+    expect(await screen.findByText("AI-generated · verify in evidence")).toBeInTheDocument();
+    expect(screen.queryByText("AI-generated · not source data")).not.toBeInTheDocument();
+    unmount();
+    stubAnswer({ kind: "abstain", citations: [], confidence: "low" });
+    render(<AssistantPanel />);
+    await ask("next year");
+    expect(await screen.findByText("AI-generated · not source data")).toBeInTheDocument();
+  });
+
   it("Open in dashboard hands the host the exact target and closes the drawer", async () => {
     stubAnswer({ kind: "normal", citations: [germanyVeltrix], confidence: "high" });
     const onOpenEvidence = vi.fn();

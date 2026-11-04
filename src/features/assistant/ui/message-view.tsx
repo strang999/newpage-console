@@ -30,6 +30,10 @@ export function MessageView({
       ? `Connection problem. Retrying automatically (attempt ${message.autoRetries + 1} of 3)…`
       : STATUS_COPY[message.status];
 
+  // The wording is the assistant's own either way; once it cites data, the label points at where the figures can be checked.
+  const hasEvidence = message.status === "complete" && (message.meta?.citations.length ?? 0) > 0;
+  const aiLabel = hasEvidence ? "AI-generated · verify in evidence" : "AI-generated · not source data";
+
   return (
     <li className="flex flex-col gap-2">
       <div className="self-end rounded-md bg-[var(--color-surface-sunken)] px-3 py-2 text-sm">
@@ -42,7 +46,7 @@ export function MessageView({
         aria-busy={active}
         className="rounded-md border-l-4 border-[var(--color-ai-border)] bg-[var(--color-ai-surface)] p-3 text-[var(--color-ai-text)]"
       >
-        <p className="mb-1 text-xs font-semibold uppercase tracking-wide">AI-generated · not source data</p>
+        <p className="mb-1 text-xs font-semibold uppercase tracking-wide">{aiLabel}</p>
 
         {message.prior.map((prior) => (
           <details key={prior.attemptId} className="mb-2 text-xs">
