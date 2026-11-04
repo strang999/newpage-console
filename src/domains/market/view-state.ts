@@ -1,5 +1,5 @@
 import type { Dataset, MarketStatus } from "./schema";
-import { statusSchema } from "./schema";
+import { STATUS_VALUES } from "./status-values";
 
 export const MODES = ["executive", "analyst"] as const;
 export type Mode = (typeof MODES)[number];
@@ -68,7 +68,7 @@ export function reconcileViewState(input: ViewStateInput, dataset: Dataset): Vie
     input.period && dataset.meta.periods.includes(input.period) ? input.period : dataset.meta.latestPeriod;
 
   const compareType = oneOf(COMPARE_TYPES, input.compareType);
-  const status = statusSchema.safeParse(input.status);
+  const status = oneOf(STATUS_VALUES, input.status);
   let compare: string[] = [];
   if (compareType) {
     const known = compareType === "market" ? new Set(marketsById.keys()) : regionIds;
@@ -85,7 +85,7 @@ export function reconcileViewState(input: ViewStateInput, dataset: Dataset): Vie
     metric: oneOf(MAP_METRICS, input.metric) ?? DEFAULT_METRIC,
     compareType: validCompare ? compareType : null,
     compare: validCompare ? compare : [],
-    status: status.success ? status.data : null,
+    status,
   };
 }
 

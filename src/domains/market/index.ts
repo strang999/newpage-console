@@ -35,3 +35,5 @@ export { displayOneDecimal } from "./rounding";
 
 export { applyLive, initialLiveState, LIVE_MAX_DRIFT, nextLiveState } from "./live";
 export type { LiveState } from "./live";
+export { decodeDataset, encodeDataset } from "./wire";
+export type { WireDataset } from "./wire";

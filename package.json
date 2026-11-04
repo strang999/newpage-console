@@ -2,6 +2,10 @@
   "name": "market-operations-console",
   "version": "0.1.0",
   "private": true,
+  "sideEffects": [
+    "./src/shared/lib/zod-config.ts",
+    "**/*.css"
+  ],
   "type": "module",
   "packageManager": "pnpm@10.24.0",
   "engines": {

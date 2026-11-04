@@ -1,18 +1,18 @@
 {
-  "measuredAt": "2026-11-04T14:37:58.527Z",
+  "measuredAt": "2026-11-04T18:08:17.110Z",
   "node": "v22.22.0",
   "pages": {
     "/ (executive)": {
-      "scripts": 13,
-      "raw": 811143,
-      "gzip": 246946,
-      "brotli": 214940
+      "scripts": 12,
+      "raw": 666490,
+      "gzip": 205471,
+      "brotli": 178710
     },
     "/?mode=analyst": {
-      "scripts": 13,
-      "raw": 811143,
-      "gzip": 246946,
-      "brotli": 214940
+      "scripts": 12,
+      "raw": 666490,
+      "gzip": 205471,
+      "brotli": 178710
     }
   },
   "lazy": [
@@ -24,18 +24,25 @@
       "brotli": 76871
     },
     {
-      "file": "0341-v0h13sne.js",
+      "file": "3iws0qpqzrgdi.js",
       "label": "map geometry + react-simple-maps (lazy: loads with the map)",
-      "raw": 194834,
-      "gzip": 67913,
-      "brotli": 59004
+      "raw": 194823,
+      "gzip": 67907,
+      "brotli": 59000
     },
     {
-      "file": "0et91908fqk2r.js",
+      "file": "1esb900tupwkt.js",
       "label": "other lazy chunk",
-      "raw": 55536,
-      "gzip": 18998,
-      "brotli": 17160
+      "raw": 107497,
+      "gzip": 30606,
+      "brotli": 26701
+    },
+    {
+      "file": "0i4gc6-z09fik.js",
+      "label": "other lazy chunk",
+      "raw": 56998,
+      "gzip": 19608,
+      "brotli": 17672
     },
     {
       "file": "19pyde-7f6yu5.js",
@@ -43,6 +50,13 @@
       "raw": 66851,
       "gzip": 17867,
       "brotli": 15786
+    },
+    {
+      "file": "3-w59gh-6slp8.js",
+      "label": "other lazy chunk",
+      "raw": 34761,
+      "gzip": 11043,
+      "brotli": 9805
     },
     {
       "file": "0ds0ypaf9gvb1.js",
@@ -59,11 +73,11 @@
       "brotli": 7675
     },
     {
-      "file": "06i-o1gsskav4.js",
+      "file": "4272_epn82rcg.js",
       "label": "other lazy chunk",
-      "raw": 10794,
-      "gzip": 3862,
-      "brotli": 3452
+      "raw": 10779,
+      "gzip": 3854,
+      "brotli": 3443
     },
     {
       "file": "0aar004apt7_e.js",
@@ -73,11 +87,32 @@
       "brotli": 3140
     },
     {
-      "file": "2b-x-fc62sdf5.js",
+      "file": "1inu32_jnlbg_.js",
       "label": "other lazy chunk",
-      "raw": 5418,
-      "gzip": 2405,
-      "brotli": 2174
+      "raw": 8689,
+      "gzip": 3213,
+      "brotli": 2934
+    },
+    {
+      "file": "3w3b_sp5e9_8p.js",
+      "label": "other lazy chunk",
+      "raw": 6597,
+      "gzip": 2513,
+      "brotli": 2254
+    },
+    {
+      "file": "2ikyfsvt07nxt.js",
+      "label": "other lazy chunk",
+      "raw": 5403,
+      "gzip": 2396,
+      "brotli": 2170
+    },
+    {
+      "file": "0vuz41_54tyoo.js",
+      "label": "other lazy chunk",
+      "raw": 4281,
+      "gzip": 1965,
+      "brotli": 1707
     }
   ]
 }

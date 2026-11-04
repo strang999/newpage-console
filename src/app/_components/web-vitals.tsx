@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { onCLS, onFCP, onINP, onLCP, onTTFB, type Metric } from "web-vitals";
+import type { Metric } from "web-vitals";
 import { track } from "@/shared/observability";
 
 function report(metric: Metric) {
@@ -12,11 +12,23 @@ function report(metric: Metric) {
 /** Field Core Web Vitals through the same allowlisted, content-free pipeline as every other event. Renders nothing. */
 export function WebVitals() {
   useEffect(() => {
-    onCLS(report);
-    onINP(report);
-    onLCP(report);
-    onFCP(report);
-    onTTFB(report);
+    // Loaded once the browser is idle, so measuring the page does not compete with painting it. The library observes with
+    // `buffered: true`, so metrics that happened before it loaded (paint, LCP, layout shifts) are still reported.
+    const start = () => {
+      void import("web-vitals").then(({ onCLS, onFCP, onINP, onLCP, onTTFB }) => {
+        onCLS(report);
+        onINP(report);
+        onLCP(report);
+        onFCP(report);
+        onTTFB(report);
+      });
+    };
+    if (typeof requestIdleCallback === "function") {
+      const handle = requestIdleCallback(start, { timeout: 3000 });
+      return () => cancelIdleCallback(handle);
+    }
+    const timer = setTimeout(start, 1000);
+    return () => clearTimeout(timer);
   }, []);
   return null;
 }

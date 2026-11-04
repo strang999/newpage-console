@@ -30,12 +30,15 @@ export function LazySurface<P>({
   title,
   handle,
   loadingMinHeight,
+  className,
   children,
 }: {
   surface: string;
   title: string;
   handle: ReturnType<typeof createRetryableLazy<P>>;
   loadingMinHeight: string;
+  /** Class for the element that wraps the loaded surface, e.g. `h-full` when the surface fills its parent. */
+  className?: string;
   children: (Component: ComponentType<P>) => ReactNode;
 }) {
   const [attempt, setAttempt] = useState(0);
@@ -62,7 +65,9 @@ export function LazySurface<P>({
           </div>
         }
       >
-        <div key={attempt}>{children(Component)}</div>
+        <div key={attempt} className={className}>
+          {children(Component)}
+        </div>
       </Suspense>
     </ErrorBoundary>
   );

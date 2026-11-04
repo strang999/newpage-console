@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { AssistantPanel } from "@/features/assistant";
+import { useEffect, useRef, useState, useSyncExternalStore, type ComponentProps } from "react";
+import type { AssistantPanel } from "@/features/assistant";
 import { CommandPalette } from "@/features/command-palette";
 import { ExecutiveSummary } from "@/features/executive-summary";
 import { MarketExplorer } from "@/features/market-explorer";
@@ -36,6 +36,9 @@ export function Dashboard() {
 
 // Analyst-only surfaces are loaded on demand, so the executive first load does not pay for the form library, the
 // heatmap or the comparison (see docs/performance.md). A failed chunk can be retried (see LazySurface).
+// The assistant (stream client, reducer, schemas) is not needed to paint the dashboard, and on a phone it sits in a drawer that
+// starts closed: its code loads when the drawer is first opened, or straight away on a wide screen where it is the side column.
+const assistant = createRetryableLazy<ComponentProps<typeof AssistantPanel>>(() => import("@/features/assistant").then((m) => m.AssistantPanel));
 const factTable = createRetryableLazy(() => import("@/features/fact-table").then((m) => m.FactTable));
 const alertRules = createRetryableLazy(() => import("@/features/alert-rules").then((m) => m.AlertRules));
 const marketComparison = createRetryableLazy(() => import("@/features/market-comparison").then((m) => m.MarketComparison));
@@ -69,6 +72,9 @@ function DashboardView({ dataset: base }: { dataset: NonNullable<ReturnType<type
   const desktop = useMediaQuery("(min-width: 1280px)");
   const [assistantOpen, setAssistantOpen] = useState(false);
   const drawerOpen = assistantOpen && !desktop;
+  // Once mounted the assistant stays mounted, so the conversation (and a running answer) survives closing the drawer or resizing.
+  const [assistantMounted, setAssistantMounted] = useState(false);
+  if (!assistantMounted && (desktop || assistantOpen)) setAssistantMounted(true);
   const drawer = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
@@ -201,19 +207,23 @@ function DashboardView({ dataset: base }: { dataset: NonNullable<ReturnType<type
           </button>
         )}
         <div className="min-h-0 flex-1 xl:h-full">
-          <ErrorBoundary surface="assistant" fallback={(retry) => <SurfaceFallback title="The assistant is unavailable." detail="The dashboard is not affected: every number and chart still works." retry={retry} />}>
-          <AssistantPanel
-            dataset={base}
-            view={{
-              context: { period: state.period, ...(scope.regionId ? { regionId: scope.regionId } : {}), ...(scope.marketId ? { marketId: scope.marketId } : {}), ...(scope.productId ? { productId: scope.productId } : {}) },
-              label: `${scopeLabel(dataset, scope)} · ${formatPeriodLabel(state.period)}`,
-            }}
-            onOpenEvidence={(t) => {
-              navigate({ region: t.region, market: t.market, product: t.product, period: t.period });
-              setAssistantOpen(false); // on a phone the drawer covers the dashboard: close it so the effect is visible
-            }}
-          />
-          </ErrorBoundary>
+          {assistantMounted && (
+            <LazySurface surface="assistant" title="The assistant" handle={assistant} loadingMinHeight="420px" className="h-full">
+              {(Assistant) => (
+                <Assistant
+                  dataset={base}
+                  view={{
+                    context: { period: state.period, ...(scope.regionId ? { regionId: scope.regionId } : {}), ...(scope.marketId ? { marketId: scope.marketId } : {}), ...(scope.productId ? { productId: scope.productId } : {}) },
+                    label: `${scopeLabel(dataset, scope)} · ${formatPeriodLabel(state.period)}`,
+                  }}
+                  onOpenEvidence={(t) => {
+                    navigate({ region: t.region, market: t.market, product: t.product, period: t.period });
+                    setAssistantOpen(false); // on a phone the drawer covers the dashboard: close it so the effect is visible
+                  }}
+                />
+              )}
+            </LazySurface>
+          )}
         </div>
       </div>
     </div>

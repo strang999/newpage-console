@@ -1,10 +1,11 @@
 import "@/shared/lib/zod-config";
 import { z } from "zod";
+import { STATUS_VALUES } from "./status-values";
 
 const periodSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "period must be YYYY-MM");
 const money = z.number().finite().nonnegative();
 
-export const statusSchema = z.enum(["on_track", "at_risk", "off_track"]);
+export const statusSchema = z.enum(STATUS_VALUES);
 export type MarketStatus = z.infer<typeof statusSchema>;
 
 const regionSchema = z.object({ id: z.string().min(1), name: z.string().min(1) });
