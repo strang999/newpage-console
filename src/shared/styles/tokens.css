@@ -32,6 +32,22 @@
   --color-status-neutral: #4a5465;
   --color-status-neutral-soft: #eceff3;
 
+  /* Map and heat scales. Sequential and diverging ramps differ in lightness as well as hue; no-data is hatched, not just grey. */
+  --scale-seq-0: #dbe7fb;
+  --scale-seq-1: #aac4f4;
+  --scale-seq-2: #6f9be8;
+  --scale-seq-3: #3a6fd2;
+  --scale-seq-4: #1b45a6;
+  --scale-div-0: #a8231b;
+  --scale-div-1: #e59a93;
+  --scale-div-2: #eceef2;
+  --scale-div-3: #9dbbef;
+  --scale-div-4: #1d4ed8;
+  --scale-cat-0: #3f9b6b;
+  --scale-cat-1: #e0a53a;
+  --scale-cat-2: #c9473f;
+  --scale-nodata: #e4e7ec;
+
   /* Focus */
   --color-focus: #1d4ed8;
   --focus-ring: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-focus);

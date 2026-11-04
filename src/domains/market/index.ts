@@ -19,3 +19,7 @@ export type { CompareType, MapMetric, Mode, ParamsLike, ParsedViewState, ViewSta
 export { resolveCitation } from "./evidence";
 export type { CitationInput, EvidenceSnapshot, EvidenceTarget, ResolvedEvidence } from "./evidence";
 export { formatPeriodLabel } from "./period";
+export { numericIdForIso3 } from "./geo";
+export { buildMapScale } from "./map-scale";
+export type { MapScale, ScaleKind } from "./map-scale";
+export { STATUS_META } from "./status";

@@ -63,3 +63,24 @@ body {
     outline-color: CanvasText;
   }
 }
+
+/* Map countries are SVG paths: focus is shown with a heavy outline stroke (box-shadow does not apply to SVG). */
+.map-country {
+  cursor: pointer;
+  outline: none;
+}
+.map-country:hover {
+  stroke: var(--color-text);
+  stroke-width: 1.6;
+}
+.map-country:focus-visible {
+  stroke: var(--color-focus);
+  stroke-width: 3;
+  paint-order: stroke;
+  box-shadow: none;
+}
+@media (forced-colors: active) {
+  .map-country:focus-visible {
+    stroke: Highlight;
+  }
+}

@@ -1,15 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { formatPeriodLabel, type Dataset, type EvidenceTarget, type CitationInput, type Metrics, type ResolvedEvidence, resolveCitation } from "@/domains/market";
+import { formatPeriodLabel, type Dataset, type EvidenceTarget, type CitationInput, type Metrics, type ResolvedEvidence, resolveCitation, STATUS_META } from "@/domains/market";
 import { formatInteger, formatPercent, formatUsdExact } from "@/shared/lib/format";
-import { StatusBadge, type Tone } from "@/shared/ui/status-badge";
-
-const STATUS: Record<string, { label: string; tone: Tone }> = {
-  on_track: { label: "On track", tone: "positive" },
-  at_risk: { label: "At risk", tone: "warning" },
-  off_track: { label: "Off track", tone: "critical" },
-};
+import { StatusBadge } from "@/shared/ui/status-badge";
 
 const ROWS: { label: string; value: (m: Metrics) => string }[] = [
   { label: "Actual revenue", value: (m) => formatUsdExact(m.actual) },
@@ -133,7 +127,7 @@ export function EvidenceDrawer({
                 </h3>
                 <p className="text-xs text-[var(--color-text-muted)]">Status and share exist only for the latest period. They are supplied with the dataset, not derived from the monthly facts above.</p>
                 <p className="mt-2 flex items-center gap-3 text-sm">
-                  <StatusBadge tone={STATUS[evidence.snapshot.status]?.tone ?? "neutral"} label={STATUS[evidence.snapshot.status]?.label ?? evidence.snapshot.status} />
+                  <StatusBadge tone={STATUS_META[evidence.snapshot.status].tone} label={STATUS_META[evidence.snapshot.status].label} />
                   <span>Market share {formatPercent(evidence.snapshot.sharePct)}</span>
                 </p>
                 {evidence.snapshot.anomalies.map((a) => (

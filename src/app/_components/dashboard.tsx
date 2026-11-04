@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { AssistantPanel } from "@/features/assistant";
 import { MarketExplorer } from "@/features/market-explorer";
+import { MarketMap } from "@/features/market-map";
 import { PortfolioOverview } from "@/features/portfolio-overview";
 import { useViewState } from "../_url/use-view-state";
 import { useDataset } from "./dataset-query";
@@ -42,6 +43,14 @@ function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof use
         period={state.period}
         onSelect={(selection) => navigate(selection)}
         onPeriodChange={(period) => navigate({ period })}
+      />
+      <MarketMap
+        dataset={dataset}
+        period={state.period}
+        metric={state.metric}
+        selectedMarket={state.market}
+        onMetricChange={(metric) => navigate({ metric })}
+        onSelectMarket={(market) => navigate({ market })}
       />
       <PortfolioOverview dataset={dataset} period={state.period} onSelectMarket={(market) => navigate({ market })} />
       </div>

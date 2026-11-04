@@ -13,9 +13,11 @@ Updated: 2026-11-03 (Asia/Bangkok). Execution plan: planning package `PLAN-STRIC
 | P3b resilience | implemented, locally verified (159 unit/component tests; e2e 24 pass on clean runs) | below |
 | P3c trust UI + single P3 review | review FAIL (4 defects, 2 incompletes) -> fixed: unsupported causal claim in the unchanged germany-dip fixture (now an override), duplicate error announcement, DEFAULT_POLICY untested, override figures not anchored per entity, hook unmount/flush and retry edge cases untested. 204 tests, e2e 27 pass | `docs/data-quality.md` |
 
+| P4 / F04 map | implemented, locally verified; review pending | `features/F04-map.md` |
+
 ## Next concrete step
 
-P4 choropleth map. Anton checkpoint 1 is now (see chat).
+P5 comparison radar, P6 heatmap, P7 executive/analyst (+ layout and visual polish pass), P8 alerts, P9 hardening, P10 release.
 
 ## Known gaps / limitations
 
