@@ -18,11 +18,11 @@ Updated: 2026-11-03 (Asia/Bangkok). Execution plan: planning package `PLAN-STRIC
 | P6 / F06 heatmap | done: review FAIL (4 defects, 4 incompletes) -> fixed (composed selection+focus ring, shortcuts not swallowed, tab stop follows selection, single selection semantics, independent 312-cell recompute, marker movement asserted, click-then-arrows) | `features/F06-heatmap.md` |
 | P7 / F07 audience | done: review FAIL (6 defects, 3 incompletes) -> fixed (modal drawer with inert page + scroll lock, Escape layering, resize, end-of-page padding, sort-tie and keyboard tests) | `features/F07-audience.md` |
 | P8 / F08 alerts | done: review FAIL (9 defects, 1 incomplete) -> fixed (re-entrancy guard, retry keeps its success handler, edits during a save survive, empty-cache snapshot, focus + status region, display-consistent rounding, 0.1-step thresholds, invisible names, stale bounds error, other tabs) | `features/F08-alerts.md` |
-| P9 / F09 observability | implemented, locally verified; review pending | `features/F09-observability.md`, `docs/performance.md` |
+| P9 / F09 observability | done: review FAIL -> fixed (retryable lazy surfaces via `LazySurface`, focus after retry, telemetry body cap, favicon, assistant telemetry sentinel test, reduced-motion control run). 455 unit tests, e2e 118 passed | `features/F09-observability.md`, `docs/performance.md` |
 
 ## Next concrete step
 
-P7 executive/analyst (+ layout and visual polish pass), P10 release (README, screenshots, prod verification, Vercel protection decision).
+P10 release: README written; production deployment checked (root 200, `/api/chat` streams incrementally via `vercel curl`). Remaining: Anton rewrites the README sections marked `<!-- ANTON: rewrite in your own words -->`; Anton decides Vercel Authentication and when to make the repo public. No email sent. Stretch goals are not started.
 
 ## Known gaps / limitations
 
