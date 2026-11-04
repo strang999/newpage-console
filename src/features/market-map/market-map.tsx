@@ -4,7 +4,7 @@ import { lazy, Suspense, useId, useMemo, useState } from "react";
 import { buildMapScale, formatPeriodLabel, marketRows, type Dataset, type MapMetric } from "@/domains/market";
 import { Legend } from "./ui/legend";
 import { MapTable } from "./ui/map-table";
-import type { Readout } from "./ui/map-canvas";
+import type { Pointer } from "./ui/map-canvas";
 
 const MapCanvas = lazy(() => import("./ui/map-canvas"));
 
@@ -31,18 +31,31 @@ export function MarketMap({
   onSelectMarket: (marketId: string) => void;
 }) {
   const [view, setView] = useState<"map" | "table">("map");
-  const [readout, setReadout] = useState<Readout | null>(null);
+  const [hover, setHover] = useState<Pointer | null>(null);
+  const [focusedMarket, setFocusedMarket] = useState<string | null>(null);
   const name = useId();
   const periodLabel = formatPeriodLabel(period);
   const rows = useMemo(() => marketRows(dataset, period), [dataset, period]);
   const scale = useMemo(() => buildMapScale(metric, rows), [metric, rows]);
   const snapshotLabel = formatPeriodLabel(dataset.meta.latestPeriod);
 
-  const readoutText = readout
-    ? readout.row
-      ? `${readout.name}: ${scale.title} ${scale.valueText(readout.row)}`
-      : `${readout.name}: No data`
+  // Resolved against the current rows on every render, so a period or metric change can never leave a stale value.
+  const pointer: Pointer | null = hover ?? (focusedMarket ? { kind: "market", marketId: focusedMarket } : null);
+  const pointed = pointer?.kind === "market" ? rows.find((r) => r.market.id === pointer.marketId) : undefined;
+  const readoutText = pointer
+    ? pointed
+      ? `${pointed.market.name}: ${scale.title} ${scale.valueText(pointed)}`
+      : pointer.kind === "other"
+        ? `${pointer.name}: No data`
+        : "Hover or focus a country for its value. Select a market to drill in."
     : "Hover or focus a country for its value. Select a market to drill in.";
+
+  function switchView(next: "map" | "table") {
+    // The canvas unmounts on the table view; drop pointer state so nothing stale survives the switch.
+    setHover(null);
+    setFocusedMarket(null);
+    setView(next);
+  }
 
   return (
     <section aria-labelledby={`${name}-title`} className="rounded-md border border-border bg-surface p-4">
@@ -61,7 +74,7 @@ export function MarketMap({
               key={v}
               type="button"
               aria-pressed={view === v}
-              onClick={() => setView(v)}
+              onClick={() => switchView(v)}
               className={`rounded-sm border px-3 py-1 text-sm font-medium ${view === v ? "border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-accent-contrast)]" : "border-[var(--color-border-strong)] bg-surface"}`}
             >
               {v === "map" ? "Map" : "Table"}
@@ -88,7 +101,7 @@ export function MarketMap({
         <>
           <div className="mt-3 aspect-[800/410] w-full" role="group" aria-label={`Map of the ${rows.length} markets coloured by ${scale.title}. Countries without data are hatched. The table view has the same values.`}>
             <Suspense fallback={<p className="p-4 text-sm text-muted">Loading map…</p>}>
-              <MapCanvas rows={rows} scale={scale} selectedMarket={selectedMarket} onSelect={onSelectMarket} onReadout={setReadout} />
+              <MapCanvas rows={rows} scale={scale} selectedMarket={selectedMarket} focusedMarket={focusedMarket} onSelect={onSelectMarket} onHover={setHover} onFocusChange={setFocusedMarket} />
             </Suspense>
           </div>
           <p className="mt-1 min-h-5 text-sm" data-testid="map-readout">

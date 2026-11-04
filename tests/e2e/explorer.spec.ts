@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { gotoReady } from "./helpers";
 import { expect, test, type Page } from "@playwright/test";
 
-const children = (page: Page) => page.getByRole("region", { name: /^(Regions|Markets|Products)/ });
+const children = (page: Page) => page.getByRole("region", { name: /^(Regions|Markets|Products) · select/ });
 const h1 = (page: Page) => page.getByRole("heading", { level: 1 });
 
 test("drill three levels, pick a period, reload restores the view, back walks the history", async ({ page }, testInfo) => {
@@ -74,7 +74,7 @@ test("breadcrumb and table alternative are keyboard operable", async ({ page }) 
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\?region=eu&period=2026-03$/);
 
-  const tableToggle = page.getByRole("button", { name: "Table" });
+  const tableToggle = page.getByRole("region", { name: "Actual vs forecast vs prior year" }).getByRole("button", { name: "Table" });
   await tableToggle.focus();
   await page.keyboard.press("Space");
   const table = page.getByRole("table", { name: /Monthly actual, forecast and prior-year revenue for Europe/ });

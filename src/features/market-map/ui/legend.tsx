@@ -1,27 +1,30 @@
 import type { MapScale } from "@/domains/market";
-import { classColor, NO_DATA_PATTERN_ID } from "../colors";
+import { classColor } from "../colors";
+import { mapPatterns } from "./patterns";
 
-/** Numeric stops, not just colours: every swatch is labelled with its range. */
+const legendPatterns = mapPatterns("legend");
+
+/** Numeric stops, not just colours: every swatch is labelled with its range, and status swatches carry the same texture as the map. */
 export function Legend({ scale }: { scale: MapScale }) {
   return (
     <div>
+      {/* One definition block for the swatches, so pattern ids are unique in the document. */}
+      <svg width="0" height="0" aria-hidden="true" focusable="false" className="absolute">
+        {legendPatterns.defs}
+      </svg>
       <p className="text-xs font-semibold">{scale.title}</p>
       <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
         {scale.classes.map((c, i) => (
           <li key={c.label} className="flex items-center gap-1.5 text-xs">
-            <span aria-hidden="true" className="inline-block h-3 w-5 rounded-sm border border-[var(--color-border-strong)]" style={{ background: classColor(scale, i) }} />
+            <svg width="22" height="12" aria-hidden="true" className="rounded-sm border border-[var(--color-text-muted)]">
+              <rect width="22" height="12" fill={scale.kind === "categorical" ? legendPatterns.categorical(i) : classColor(scale, i)} />
+            </svg>
             {c.label}
           </li>
         ))}
         <li className="flex items-center gap-1.5 text-xs">
-          <svg width="20" height="12" aria-hidden="true" className="rounded-sm border border-[var(--color-border-strong)]">
-            <defs>
-              <pattern id={`${NO_DATA_PATTERN_ID}-legend`} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                <rect width="6" height="6" fill="var(--scale-nodata)" />
-                <line x1="0" y1="0" x2="0" y2="6" stroke="var(--color-border-strong)" strokeWidth="1" />
-              </pattern>
-            </defs>
-            <rect width="20" height="12" fill={`url(#${NO_DATA_PATTERN_ID}-legend)`} />
+          <svg width="22" height="12" aria-hidden="true" className="rounded-sm border border-[var(--color-text-muted)]">
+            <rect width="22" height="12" fill={legendPatterns.noData} />
           </svg>
           No data
         </li>

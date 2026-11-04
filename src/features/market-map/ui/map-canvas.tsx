@@ -4,40 +4,49 @@ import type { GeoJsonObject } from "geojson";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
 import { numericIdForIso3, type MapScale, type MarketRow } from "@/domains/market";
 import topology from "../data/countries-110m.json";
-import { classColor, NO_DATA_PATTERN_ID } from "../colors";
+import { classColor } from "../colors";
+import { mapPatterns } from "./patterns";
 
-export type Readout = { name: string; row: MarketRow | null };
+/** What the readout line is pointing at. Resolved against the current rows, so it can never show a stale value. */
+export type Pointer = { kind: "market"; marketId: string } | { kind: "other"; name: string };
 
 const ANTARCTICA = "010";
+const patterns = mapPatterns("map");
 
 /**
  * The choropleth. Market countries are real buttons (focusable, Enter/Space to drill, aria-label with the value) drawn
- * last so their outline is never covered; every other country is decorative and hatched as "no data".
- * No business math here: classes and value text come from the scale built in the domain.
+ * after the decorative land; every other country is `aria-hidden`, not focusable and hatched as "no data". The
+ * selected and focused markets get a two-tone outline drawn on top, so the indicator is visible on any fill and is
+ * never covered by a neighbour. No business math here: classes and value text come from the scale.
  */
 export default function MapCanvas({
   rows,
   scale,
   selectedMarket,
+  focusedMarket,
   onSelect,
-  onReadout,
+  onHover,
+  onFocusChange,
 }: {
   rows: readonly MarketRow[];
   scale: MapScale;
   selectedMarket: string | null;
+  focusedMarket: string | null;
   onSelect: (marketId: string) => void;
-  onReadout: (readout: Readout | null) => void;
+  onHover: (pointer: Pointer | null) => void;
+  onFocusChange: (marketId: string | null) => void;
 }) {
   const byNumericId = new Map(rows.map((row) => [numericIdForIso3(row.market.iso3), row] as const));
 
+  const fillFor = (row: MarketRow) => {
+    const cls = scale.classify(row);
+    if (cls === null) return patterns.noData;
+    return scale.kind === "categorical" ? patterns.categorical(cls) : classColor(scale, cls);
+  };
+
   return (
     <ComposableMap projection="geoEqualEarth" projectionConfig={{ scale: 150 }} width={800} height={410} className="block h-auto w-full">
-      <defs>
-        <pattern id={NO_DATA_PATTERN_ID} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-          <rect width="6" height="6" fill="var(--scale-nodata)" />
-          <line x1="0" y1="0" x2="0" y2="6" stroke="var(--color-border-strong)" strokeWidth="1" />
-        </pattern>
-      </defs>
+      {patterns.defs}
       <Geographies geography={topology as unknown as GeoJsonObject}>
         {({ geographies }) => {
           const land = geographies.filter((g) => String(g.id) !== ANTARCTICA);
@@ -46,26 +55,25 @@ export default function MapCanvas({
             const geo = land.find((g) => String(g.id) === numericIdForIso3(row.market.iso3));
             return geo ? [{ row, geo }] : [];
           });
+          const outlined = marketGeos.filter(({ row }) => row.market.id === selectedMarket || row.market.id === focusedMarket);
           return (
             <>
               {others.map((geo) => (
                 <Geography
                   key={geo.rsmKey}
                   geography={geo}
-                  fill={`url(#${NO_DATA_PATTERN_ID})`}
+                  fill={patterns.noData}
                   stroke="var(--color-surface)"
                   strokeWidth={0.4}
                   aria-hidden="true"
                   tabIndex={-1}
                   focusable="false"
-                  onMouseEnter={() => onReadout({ name: String(geo.properties?.name ?? "Unknown"), row: null })}
-                  onMouseLeave={() => onReadout(null)}
+                  onMouseEnter={() => onHover({ kind: "other", name: String(geo.properties?.name ?? "Unknown") })}
+                  onMouseLeave={() => onHover(null)}
                 />
               ))}
               {marketGeos.map(({ row, geo }) => {
-                const cls = scale.classify(row);
                 const selected = row.market.id === selectedMarket;
-                const value = scale.valueText(row);
                 return (
                   <Geography
                     key={geo.rsmKey}
@@ -73,11 +81,11 @@ export default function MapCanvas({
                     className="map-country"
                     role="button"
                     tabIndex={0}
-                    aria-label={`${row.market.name}: ${scale.title} ${value}${selected ? ", selected" : ""}. Press Enter to open.`}
+                    aria-label={`${row.market.name}: ${scale.title} ${scale.valueText(row)}${selected ? ", selected" : ""}. Press Enter to open.`}
                     aria-pressed={selected}
-                    fill={cls === null ? `url(#${NO_DATA_PATTERN_ID})` : classColor(scale, cls)}
-                    stroke={selected ? "var(--color-text)" : "var(--color-surface)"}
-                    strokeWidth={selected ? 2.2 : 0.8}
+                    fill={fillFor(row)}
+                    stroke="var(--color-text-muted)"
+                    strokeWidth={0.7}
                     onClick={() => onSelect(row.market.id)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
@@ -85,11 +93,21 @@ export default function MapCanvas({
                         onSelect(row.market.id);
                       }
                     }}
-                    onMouseEnter={() => onReadout({ name: row.market.name, row })}
-                    onMouseLeave={() => onReadout(null)}
-                    onFocus={() => onReadout({ name: row.market.name, row })}
-                    onBlur={() => onReadout(null)}
+                    onMouseEnter={() => onHover({ kind: "market", marketId: row.market.id })}
+                    onMouseLeave={() => onHover(null)}
+                    onFocus={() => onFocusChange(row.market.id)}
+                    onBlur={() => onFocusChange(null)}
                   />
+                );
+              })}
+              {/* Two-tone outline overlays: a white halo under a dark stroke reads on every fill; pointer events pass through. */}
+              {outlined.map(({ row, geo }) => {
+                const focused = row.market.id === focusedMarket;
+                return (
+                  <g key={`outline-${geo.rsmKey}`} pointerEvents="none" aria-hidden="true" data-testid={focused ? "map-focus-ring" : "map-selected-ring"}>
+                    <Geography geography={geo} fill="none" stroke="#fff" strokeWidth={focused ? 6 : 4.5} tabIndex={-1} focusable="false" />
+                    <Geography geography={geo} fill="none" stroke="var(--color-text)" strokeWidth={focused ? 3 : 2} strokeDasharray={focused ? undefined : "5 3"} tabIndex={-1} focusable="false" />
+                  </g>
                 );
               })}
             </>

@@ -41,8 +41,8 @@ function rangeLabels(bounds: readonly number[]): { label: string }[] {
   const first = bounds[0] ?? 0;
   const last = bounds[bounds.length - 1] ?? 0;
   return [
-    { label: `Below ${pct(first)}` },
-    ...bounds.slice(0, -1).map((b, i) => ({ label: `${pct(b)} to ${pct(bounds[i + 1] ?? b)}` })),
+    { label: `Under ${pct(first)}` },
+    ...bounds.slice(0, -1).map((b, i) => ({ label: `${pct(b)} to under ${pct(bounds[i + 1] ?? b)}` })),
     { label: `${pct(last)} and above` },
   ];
 }
@@ -98,8 +98,8 @@ export function buildMapScale(metric: MapMetric, rows: readonly MarketRow[]): Ma
     kind: "sequential",
     title: "Revenue",
     classes: [
-      { label: `Up to ${formatUsdCompact(edges[0] ?? min)}` },
-      ...[0, 1, 2].map((i) => ({ label: `${formatUsdCompact(edges[i] ?? min)} to ${formatUsdCompact(edges[i + 1] ?? max)}` })),
+      { label: `Under ${formatUsdCompact(edges[0] ?? min)}` },
+      ...[0, 1, 2].map((i) => ({ label: `${formatUsdCompact(edges[i] ?? min)} to under ${formatUsdCompact(edges[i + 1] ?? max)}` })),
       { label: `${formatUsdCompact(edges[3] ?? max)} and above` },
     ],
     classify: (row) => {

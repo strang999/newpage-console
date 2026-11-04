@@ -1,7 +1,6 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import raw from "@/data/starter/data.json";
-import { buildMapScale, datasetSchema, marketRows, numericIdForIso3 } from "./index";
+import { buildMapScale, datasetSchema, marketRows, type MapMetric, type MarketRow } from "./index";
 
 const dataset = datasetSchema.parse(raw);
 const rows = marketRows(dataset, dataset.meta.latestPeriod);
@@ -11,39 +10,10 @@ const byId = (id: string) => {
   return r;
 };
 
-describe("iso3 -> numeric geometry id", () => {
-  const topology = JSON.parse(readFileSync(new URL("../../../node_modules/world-atlas/countries-110m.json", import.meta.url), "utf8")) as {
-    objects: { countries: { geometries: { id: string; properties: { name: string } }[] } };
-  };
-  const geometries = topology.objects.countries.geometries;
-
-  it("all 13 markets resolve to exactly one geometry in the shipped TopoJSON", () => {
-    expect(dataset.markets).toHaveLength(13);
-    for (const m of dataset.markets) {
-      const id = numericIdForIso3(m.iso3);
-      expect(id, m.iso3).not.toBeNull();
-      expect(geometries.filter((g) => String(g.id) === id), `${m.iso3} -> ${id}`).toHaveLength(1);
-    }
-  });
-
-  it("maps to the right country (sanity check on names)", () => {
-    const name = (iso3: string) => geometries.find((g) => String(g.id) === numericIdForIso3(iso3))?.properties.name;
-    expect(name("DEU")).toBe("Germany");
-    expect(name("USA")).toBe("United States of America");
-    expect(name("CHN")).toBe("China");
-    expect(name("AUS")).toBe("Australia");
-  });
-
-  it("is case-insensitive and returns null for unknown codes", () => {
-    expect(numericIdForIso3("deu")).toBe("276");
-    expect(numericIdForIso3("XXX")).toBeNull();
-  });
-});
-
 describe("map scales", () => {
   it("growth: fixed bins classify on the displayed one-decimal value", () => {
     const s = buildMapScale("growth", rows);
-    expect(s.classes.map((c) => c.label)).toEqual(["Below −5%", "−5% to 0%", "0% to 5%", "5% to 10%", "10% and above"]);
+    expect(s.classes.map((c) => c.label)).toEqual(["Under −5%", "−5% to under 0%", "0% to under 5%", "5% to under 10%", "10% and above"]);
     expect(s.classify(byId("de"))).toBe(0); // -9.7
     expect(s.classify(byId("es"))).toBe(1); // -4.6
     expect(s.classify(byId("it"))).toBe(2); // +0.3
@@ -55,7 +25,7 @@ describe("map scales", () => {
 
   it("attainment: bins are centred on plan (100%)", () => {
     const s = buildMapScale("attainment", rows);
-    expect(s.classes.map((c) => c.label)).toEqual(["Below 95%", "95% to 98%", "98% to 102%", "102% to 105%", "105% and above"]);
+    expect(s.classes.map((c) => c.label)).toEqual(["Under 95%", "95% to under 98%", "98% to under 102%", "102% to under 105%", "105% and above"]);
     expect(s.classify(byId("de"))).toBe(0); // 92.2
     expect(s.classify(byId("br"))).toBe(1); // 95.5
     expect(s.classify(byId("us"))).toBe(2); // 100.6
@@ -94,5 +64,63 @@ describe("map scales", () => {
 
   it("derived metrics are labelled derived", () => {
     for (const m of ["revenue", "growth", "attainment"] as const) expect(buildMapScale(m, rows).source).toBe("derived");
+  });
+});
+
+/** Lower bounds read back from the labels, so the legend text and the classification can never drift apart. */
+function boundsFromLabels(labels: readonly string[]): number[] {
+  return labels
+    .slice(1)
+    .map((l) => /^(\u2212?\d+)%/.exec(l)?.[1])
+    .map((n) => Number((n ?? "").replace("\u2212", "-")));
+}
+const displayed = (v: number) => Math.round(v * 10) / 10;
+const withMetrics = (row: MarketRow, patch: Partial<MarketRow["metrics"]>): MarketRow => ({ ...row, metrics: { ...row.metrics, ...patch } });
+
+describe("class boundaries agree with the legend labels", () => {
+  it.each([
+    ["growth", "growthPct", [-5.04, -5, -4.95, -0.05, 0, 0.04, 4.95, 5, 9.95, 10, 10.04]],
+    ["attainment", "attainmentPct", [94.95, 95, 95.04, 97.95, 98, 101.95, 102, 104.95, 105, 105.04]],
+  ] as const)("%s: every value at or around a bound lands in the class its label says", (metric, field, values) => {
+    const scale = buildMapScale(metric as MapMetric, rows);
+    const bounds = boundsFromLabels(scale.classes.map((c) => c.label));
+    expect(bounds).toHaveLength(4);
+    for (const v of values) {
+      const expected = bounds.filter((b) => displayed(v) >= b).length;
+      expect(scale.classify(withMetrics(byId("us"), { [field]: v })), `${metric} ${v}`).toBe(expected);
+    }
+  });
+
+  it("scanned over all 24 periods, every market's displayed growth and attainment is in the class its label states", () => {
+    for (const metric of ["growth", "attainment"] as const) {
+      for (const period of dataset.meta.periods) {
+        const periodRows = marketRows(dataset, period);
+        const scale = buildMapScale(metric, periodRows);
+        const bounds = boundsFromLabels(scale.classes.map((c) => c.label));
+        for (const row of periodRows) {
+          const v = metric === "growth" ? row.metrics.growthPct : row.metrics.attainmentPct;
+          if (v === null) continue;
+          expect(scale.classify(row), `${metric} ${period} ${row.market.id} ${v}`).toBe(bounds.filter((b) => displayed(v) >= b).length);
+        }
+      }
+    }
+  });
+
+  it("labels use half-open ranges, so a shared bound belongs to exactly one class", () => {
+    const labels = buildMapScale("growth", rows).classes.map((c) => c.label);
+    expect(labels.filter((l) => l.includes("10%"))).toEqual(["5% to under 10%", "10% and above"]);
+  });
+
+  it("revenue edges: a value exactly at an edge goes up, and the labels say 'under' the edge", () => {
+    const s = buildMapScale("revenue", rows);
+    expect(s.classes[0]?.label).toMatch(/^Under \$/);
+    expect(s.classes[4]?.label).toMatch(/and above$/);
+    expect(s.classes.slice(1, 4).every((c) => /^\$[\d.]+M to under \$[\d.]+M$/.test(c.label))).toBe(true);
+    const min = Math.min(...rows.map((r) => r.metrics.actual));
+    const max = Math.max(...rows.map((r) => r.metrics.actual));
+    const step = (max - min) / 5;
+    expect(s.classify(withMetrics(byId("us"), { actual: min + step }))).toBe(1);
+    expect(s.classify(withMetrics(byId("us"), { actual: min + step - 1 }))).toBe(0);
+    expect(s.classify(withMetrics(byId("us"), { actual: min + 4 * step }))).toBe(4);
   });
 });

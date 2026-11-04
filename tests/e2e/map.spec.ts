@@ -73,3 +73,55 @@ test("the dashboard with the map has no axe violations", async ({ page }) => {
   const axe = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
   expect(axe.violations).toEqual([]);
 });
+
+test("the map and its geometry ship in their own lazy chunk, not in the main app code", async ({ page }) => {
+  const scripts: { url: string; body: string }[] = [];
+  page.on("response", async (r) => {
+    if (r.request().resourceType() !== "script") return;
+    try {
+      scripts.push({ url: r.url(), body: await r.text() });
+    } catch {
+      /* body unavailable (redirect/cancelled) */
+    }
+  });
+  await gotoReady(page, "/");
+  await expect(countries(page)).toHaveCount(13);
+  const geometry = scripts.filter((s) => s.body.includes('"Fiji"'));
+  expect(geometry.length).toBe(1);
+  const app = scripts.filter((s) => s.body.includes("Portfolio health"));
+  expect(app.length).toBeGreaterThan(0);
+  expect(geometry[0]?.body.includes("Portfolio health")).toBe(false);
+  expect(app.every((s) => s.url !== geometry[0]?.url)).toBe(true);
+});
+
+test("keyboard focus draws a visible two-tone ring on top of the neighbours", async ({ page }, testInfo) => {
+  await gotoReady(page, "/?metric=growth&market=de");
+  await expect(countries(page)).toHaveCount(13);
+  await page.getByRole("button", { name: /^China:/ }).focus();
+  const ring = page.getByTestId("map-focus-ring");
+  await expect(ring).toHaveCount(1);
+  const strokes = await ring.locator("path").evaluateAll((els) => els.map((el) => ({ stroke: el.getAttribute("stroke"), width: el.getAttribute("stroke-width") })));
+  expect(strokes).toEqual([
+    { stroke: "#fff", width: "6" },
+    { stroke: "var(--color-text)", width: "3" },
+  ]);
+  await expect(page.getByTestId("map-selected-ring")).toHaveCount(1);
+  // The ring sits after every country in the DOM, so no neighbour can paint over it.
+  const ringIsLast = await page.evaluate(() => {
+    const svg = document.querySelector("svg.rsm-svg");
+    const ringEl = document.querySelector("[data-testid='map-focus-ring']");
+    const countriesEls = [...(svg?.querySelectorAll("path.map-country") ?? [])];
+    return !!ringEl && countriesEls.every((c) => !!(c.compareDocumentPosition(ringEl) & Node.DOCUMENT_POSITION_FOLLOWING));
+  });
+  expect(ringIsLast).toBe(true);
+  await page.screenshot({ path: `docs/evidence/P4/map-focus-${testInfo.project.name}.png` });
+});
+
+test("status view uses a different texture per status on the map itself", async ({ page }, testInfo) => {
+  await gotoReady(page, "/?metric=status");
+  await expect(countries(page)).toHaveCount(13);
+  const fills = await page.locator("path.map-country").evaluateAll((els) => els.map((el) => el.getAttribute("fill")));
+  expect(new Set(fills)).toEqual(new Set(["url(#market-map-cat-0-map)", "url(#market-map-cat-1-map)", "url(#market-map-cat-2-map)"]));
+  expect(fills.filter((f) => f === "url(#market-map-cat-0-map)")).toHaveLength(7);
+  await page.screenshot({ path: `docs/evidence/P4/map-status-${testInfo.project.name}.png`, fullPage: true });
+});

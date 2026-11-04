@@ -13,7 +13,7 @@ Updated: 2026-11-03 (Asia/Bangkok). Execution plan: planning package `PLAN-STRIC
 | P3b resilience | implemented, locally verified (159 unit/component tests; e2e 24 pass on clean runs) | below |
 | P3c trust UI + single P3 review | review FAIL (4 defects, 2 incompletes) -> fixed: unsupported causal claim in the unchanged germany-dip fixture (now an override), duplicate error announcement, DEFAULT_POLICY untested, override figures not anchored per entity, hook unmount/flush and retry edge cases untested. 204 tests, e2e 27 pass | `docs/data-quality.md` |
 
-| P4 / F04 map | implemented, locally verified; review pending | `features/F04-map.md` |
+| P4 / F04 map | done: review FAIL (4 defects, 3 incompletes) -> fixed: two-tone focus/selected overlay drawn above neighbours, per-status textures + legend, dark thin outlines, readout derived from current rows (hover and focus tracked separately), half-open legend labels, boundary tests over all 24 periods, shipped geometry tested, lazy chunk asserted. 231 tests, e2e 43 pass | `features/F04-map.md` |
 
 ## Next concrete step
 

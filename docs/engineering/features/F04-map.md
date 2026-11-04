@@ -23,6 +23,10 @@ Choose a country on a choropleth coloured by revenue, growth, attainment or stat
 - Playwright desktop + mobile: click Germany -> `?region=eu&market=de`, h1 "Germany"; Tab order Canada -> Germany -> Enter; metric in URL survives reload; period picker recolours; table drills; axe clean; no console errors. Screenshots `docs/evidence/P4/`.
 - Defects found by tests and fixed: decorative countries were focusable (ARIA/axe); the map's Table toggle collided with the trend panel's.
 
+## Review-driven changes
+
+Focus and selection are drawn by a two-tone overlay (white halo under a dark stroke) rendered after all countries, because a stroke on the path itself is half-covered by neighbours and can match the fill. Status has a texture per class (dots, stripes, cross-hatch) mirrored in the legend. Market outlines are dark and thin so the lightest classes keep a visible edge. The readout resolves hover and focus against the current rows. Legend ranges are half-open ("5% to under 10%", "10% and above") so a shared bound belongs to one class; tests read the bounds back from the labels and scan all 24 periods.
+
 ## Limits
 
 No zoom/pan (not required). Small countries are tiny at 110m resolution; the table and the drill list cover them. France includes French Guiana in the 110m geometry.

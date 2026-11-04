@@ -64,23 +64,13 @@ body {
   }
 }
 
-/* Map countries are SVG paths: focus is shown with a heavy outline stroke (box-shadow does not apply to SVG). */
+/* Map countries are SVG paths. Keyboard focus is drawn by a two-tone overlay in the map canvas (it must sit above
+   neighbouring countries); the path itself only needs a pointer cursor and a hover emphasis. */
 .map-country {
   cursor: pointer;
   outline: none;
 }
 .map-country:hover {
   stroke: var(--color-text);
-  stroke-width: 1.6;
-}
-.map-country:focus-visible {
-  stroke: var(--color-focus);
-  stroke-width: 3;
-  paint-order: stroke;
-  box-shadow: none;
-}
-@media (forced-colors: active) {
-  .map-country:focus-visible {
-    stroke: Highlight;
-  }
+  stroke-width: 1.4;
 }
