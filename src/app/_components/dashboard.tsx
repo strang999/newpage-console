@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { AlertRules } from "@/features/alert-rules";
+import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { AssistantPanel } from "@/features/assistant";
 import { ExecutiveSummary } from "@/features/executive-summary";
-import { MarketComparison } from "@/features/market-comparison";
 import { MarketExplorer } from "@/features/market-explorer";
 import { MarketMap } from "@/features/market-map";
 import { MarketsTable, PortfolioHealth } from "@/features/portfolio-overview";
-import { RiskHeatmap } from "@/features/risk-heatmap";
 import { useMediaQuery } from "@/shared/lib/use-media-query";
+import { ErrorBoundary, SurfaceFallback } from "@/shared/ui/error-boundary";
 import { useViewState } from "../_url/use-view-state";
 import { useDataset } from "./dataset-query";
 import { ModeToggle } from "./mode-toggle";
@@ -31,7 +29,30 @@ export function Dashboard() {
   return <DashboardView dataset={data} />;
 }
 
+// Analyst-only surfaces are loaded on demand, so the executive first load does not pay for the form library, the
+// heatmap or the comparison (see docs/performance.md).
+const AlertRules = lazy(() => import("@/features/alert-rules").then((m) => ({ default: m.AlertRules })));
+const MarketComparison = lazy(() => import("@/features/market-comparison").then((m) => ({ default: m.MarketComparison })));
+const RiskHeatmap = lazy(() => import("@/features/risk-heatmap").then((m) => ({ default: m.RiskHeatmap })));
+
+function LoadingCard({ title, minHeight }: { title: string; minHeight: string }) {
+  return (
+    <div className="card text-sm text-muted" style={{ minHeight }} role="status">
+      Loading {title}…
+    </div>
+  );
+}
+
 const noopSubscribe = () => () => undefined;
+
+/** Contains a failure of one surface to that surface: the rest of the dashboard keeps working. */
+function Guard({ surface, title, children }: { surface: string; title: string; children: React.ReactNode }) {
+  return (
+    <ErrorBoundary surface={surface} fallback={(retry) => <SurfaceFallback title={`${title} is unavailable.`} detail="The rest of the dashboard is not affected." retry={retry} />}>
+      {children}
+    </ErrorBoundary>
+  );
+}
 
 function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof useDataset>["data"]> }) {
   const { state, navigate } = useViewState(dataset);
@@ -102,8 +123,12 @@ function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof use
         {explorer}
         {analyst ? (
           <>
-            <MarketsTable dataset={dataset} period={state.period} onSelectMarket={selectMarket} />
+            <Guard surface="markets-table" title="The markets table">
+              <MarketsTable dataset={dataset} period={state.period} onSelectMarket={selectMarket} />
+            </Guard>
             {map}
+            <Guard surface="heatmap" title="The risk heatmap">
+            <Suspense fallback={<LoadingCard title="the risk heatmap" minHeight="26rem" />}>
             <RiskHeatmap
               dataset={dataset}
               regionId={state.region}
@@ -111,12 +136,24 @@ function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof use
               period={state.period}
               onSelect={({ market, period }) => navigate({ market, period })}
             />
-            <MarketComparison dataset={dataset} period={state.period} compareType={state.compareType} compare={state.compare} onChange={(selection) => navigate(selection)} />
-            <AlertRules dataset={dataset} />
+            </Suspense>
+            </Guard>
+            <Guard surface="comparison" title="The comparison">
+              <Suspense fallback={<LoadingCard title="the comparison" minHeight="22rem" />}>
+                <MarketComparison dataset={dataset} period={state.period} compareType={state.compareType} compare={state.compare} onChange={(selection) => navigate(selection)} />
+              </Suspense>
+            </Guard>
+            <Guard surface="alerts" title="Alert rules">
+              <Suspense fallback={<LoadingCard title="alert rules" minHeight="24rem" />}>
+                <AlertRules dataset={dataset} />
+              </Suspense>
+            </Guard>
           </>
         ) : (
           <>
-            <ExecutiveSummary dataset={dataset} period={state.period} onSelectMarket={selectMarket} />
+            <Guard surface="executive-summary" title="Top risks and movers">
+              <ExecutiveSummary dataset={dataset} period={state.period} onSelectMarket={selectMarket} />
+            </Guard>
             {map}
           </>
         )}
@@ -161,6 +198,7 @@ function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof use
           </button>
         )}
         <div className="min-h-0 flex-1 xl:h-full">
+          <ErrorBoundary surface="assistant" fallback={(retry) => <SurfaceFallback title="The assistant is unavailable." detail="The dashboard is not affected: every number and chart still works." retry={retry} />}>
           <AssistantPanel
             dataset={dataset}
             onOpenEvidence={(t) => {
@@ -168,6 +206,7 @@ function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof use
               setAssistantOpen(false); // on a phone the drawer covers the dashboard: close it so the effect is visible
             }}
           />
+          </ErrorBoundary>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useReducer, useRef } from "react";
+import { track } from "@/shared/observability";
 import type { AttemptResult } from "../stream/consume";
 import { runGeneration } from "../stream/generate";
 import { initialState, isActive, reducer, type AssistantState } from "./reducer";
@@ -42,13 +43,20 @@ export function useAssistant(): {
     async (run: Run, question: string) => {
       current.current = run;
       pending.current = { text: "", frame: 0 };
+      const startedAt = performance.now();
+      let firstTokenAt: number | null = null;
+      let retries = 0;
       let result: AttemptResult;
       try {
         result = await runGeneration({
           question,
           signal: run.controller.signal,
-          onRetrying: (retry) => dispatch({ type: "retrying", id: run.id, attemptId: run.attemptId, retry }),
+          onRetrying: (retry) => {
+            retries = retry;
+            dispatch({ type: "retrying", id: run.id, attemptId: run.attemptId, retry });
+          },
           onToken: (value) => {
+            firstTokenAt ??= performance.now();
             pending.current.text += value;
             if (!pending.current.frame) {
               pending.current.frame = requestAnimationFrame(() => {
@@ -65,6 +73,15 @@ export function useAssistant(): {
       flush(run);
       current.current = null;
       const base = { id: run.id, attemptId: run.attemptId };
+      // Operational facts only: timings, retry count, how it ended and a classified code. No question, answer or citation text.
+      track("assistant_stream", {
+        attemptId: run.attemptId,
+        durationMs: performance.now() - startedAt,
+        ttftMs: firstTokenAt === null ? undefined : firstTokenAt - startedAt,
+        retryCount: retries,
+        terminalState: result.kind === "done" ? "complete" : result.kind === "failed" ? "error" : result.kind === "aborted" ? "stopped" : "incomplete",
+        errorCode: result.kind === "failed" ? result.failure.code : undefined,
+      });
       switch (result.kind) {
         case "done":
           dispatch({ type: "completed", ...base, meta: result.meta });

@@ -2,11 +2,14 @@
 
 import { lazy, Suspense, useId, useMemo, useState } from "react";
 import { buildMapScale, formatPeriodLabel, marketRows, type Dataset, type MapMetric } from "@/domains/market";
+import { ErrorBoundary, SurfaceFallback } from "@/shared/ui/error-boundary";
 import { Legend } from "./ui/legend";
 import { MapTable } from "./ui/map-table";
 import type { Pointer } from "./ui/map-canvas";
 
-const MapCanvas = lazy(() => import("./ui/map-canvas"));
+// React.lazy caches a failed import for good, so a retry needs a fresh lazy component (see `retry` below).
+const loadCanvas = () => import("./ui/map-canvas");
+let MapCanvas = lazy(loadCanvas);
 
 const METRICS: { id: MapMetric; label: string }[] = [
   { id: "revenue", label: "Revenue" },
@@ -31,6 +34,7 @@ export function MarketMap({
   onSelectMarket: (marketId: string) => void;
 }) {
   const [view, setView] = useState<"map" | "table">("map");
+  const [attempt, setAttempt] = useState(0); // bumping it re-renders this component, so the fresh lazy component below is used
   const [hover, setHover] = useState<Pointer | null>(null);
   const [focusedMarket, setFocusedMarket] = useState<string | null>(null);
   const name = useId();
@@ -99,10 +103,28 @@ export function MarketMap({
 
       {view === "map" ? (
         <>
-          <div className="mt-3 aspect-[800/372] w-full" role="group" aria-label={`Map of the ${rows.length} markets coloured by ${scale.title}. Countries without data are hatched. The table view has the same values.`}>
-            <Suspense fallback={<p className="p-4 text-sm text-muted">Loading map…</p>}>
-              <MapCanvas rows={rows} scale={scale} selectedMarket={selectedMarket} focusedMarket={focusedMarket} onSelect={onSelectMarket} onHover={setHover} onFocusChange={setFocusedMarket} />
-            </Suspense>
+          <div className="mt-3 min-h-[12rem] w-full sm:aspect-[800/372]" role="group" aria-label={`Map of the ${rows.length} markets coloured by ${scale.title}. Countries without data are hatched. The table view has the same values.`}>
+            <ErrorBoundary
+              surface="map"
+              fallback={(retry) => (
+                <div className="flex flex-col gap-3">
+                  <SurfaceFallback
+                    title="The map could not be drawn."
+                    detail="The table below has the same values for every market, and you can still select a market from it."
+                    retry={() => {
+                      MapCanvas = lazy(loadCanvas);
+                      setAttempt((n) => n + 1);
+                      retry();
+                    }}
+                  />
+                  <MapTable rows={rows} scale={scale} selectedMarket={selectedMarket} periodLabel={periodLabel} onSelect={onSelectMarket} />
+                </div>
+              )}
+            >
+              <Suspense fallback={<p className="p-4 text-sm text-muted">Loading map…</p>}>
+                <MapCanvas key={attempt} rows={rows} scale={scale} selectedMarket={selectedMarket} focusedMarket={focusedMarket} onSelect={onSelectMarket} onHover={setHover} onFocusChange={setFocusedMarket} />
+              </Suspense>
+            </ErrorBoundary>
           </div>
           <p className="mt-1 min-h-[2.75rem] text-sm sm:min-h-6" data-testid="map-readout">
             {readoutText}

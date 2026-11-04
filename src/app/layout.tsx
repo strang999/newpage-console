@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { QueryProvider } from "./_components/query-provider";
+import { WebVitals } from "./_components/web-vitals";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </div>
         </header>
         <QueryProvider>{children}</QueryProvider>
+        <WebVitals />
       </body>
     </html>
   );

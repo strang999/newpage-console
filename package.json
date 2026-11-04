@@ -19,7 +19,8 @@
     "check": "pnpm verify:starter && pnpm verify:contrast && pnpm typecheck && pnpm lint && pnpm depcruise && pnpm test && pnpm build",
     "e2e": "playwright test",
     "verify:contrast": "node scripts/check-contrast.mjs",
-    "verify:server-only": "node scripts/verify-server-only.mjs"
+    "verify:server-only": "node scripts/verify-server-only.mjs",
+    "bundle": "node scripts/bundle-size.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "7.0.1",

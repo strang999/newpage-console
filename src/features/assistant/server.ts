@@ -12,7 +12,7 @@
 // when the client aborts. The SSE protocol itself is unchanged.
 
 import "server-only";
-import { z } from "zod";
+import { z } from "@/shared/lib/zod";
 import fixtures from "@/data/starter/fixtures.json";
 import overrides from "@/data/overrides/fixtures.local.json";
 

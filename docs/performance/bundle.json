@@ -1,0 +1,83 @@
+{
+  "measuredAt": "2026-11-04T12:49:42.561Z",
+  "node": "v22.22.0",
+  "pages": {
+    "/ (executive)": {
+      "scripts": 13,
+      "raw": 1091688,
+      "gzip": 306449,
+      "brotli": 260972
+    },
+    "/?mode=analyst": {
+      "scripts": 13,
+      "raw": 1091688,
+      "gzip": 306449,
+      "brotli": 260972
+    }
+  },
+  "lazy": [
+    {
+      "file": "0hxil19ov0ph3.js",
+      "label": "Recharts (lazy: loads with the first chart)",
+      "raw": 318285,
+      "gzip": 91754,
+      "brotli": 76871
+    },
+    {
+      "file": "0341-v0h13sne.js",
+      "label": "map geometry + react-simple-maps (lazy: loads with the map)",
+      "raw": 194834,
+      "gzip": 67913,
+      "brotli": 59004
+    },
+    {
+      "file": "04hfgb7_md7v6.js",
+      "label": "other lazy chunk",
+      "raw": 55489,
+      "gzip": 18949,
+      "brotli": 17140
+    },
+    {
+      "file": "19pyde-7f6yu5.js",
+      "label": "other lazy chunk",
+      "raw": 66851,
+      "gzip": 17867,
+      "brotli": 15786
+    },
+    {
+      "file": "0ds0ypaf9gvb1.js",
+      "label": "other lazy chunk",
+      "raw": 22691,
+      "gzip": 8997,
+      "brotli": 7956
+    },
+    {
+      "file": "1o-zcm79hd1rz.js",
+      "label": "Recharts radar (lazy)",
+      "raw": 31470,
+      "gzip": 8549,
+      "brotli": 7675
+    },
+    {
+      "file": "06i-o1gsskav4.js",
+      "label": "other lazy chunk",
+      "raw": 10794,
+      "gzip": 3862,
+      "brotli": 3452
+    },
+    {
+      "file": "0aar004apt7_e.js",
+      "label": "other lazy chunk",
+      "raw": 13994,
+      "gzip": 3509,
+      "brotli": 3140
+    },
+    {
+      "file": "2b-x-fc62sdf5.js",
+      "label": "other lazy chunk",
+      "raw": 5418,
+      "gzip": 2405,
+      "brotli": 2174
+    }
+  ]
+}

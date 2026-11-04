@@ -3,11 +3,14 @@
 import { lazy, Suspense, useId, useMemo, useState } from "react";
 import { buildComparison, formatPeriodLabel, MAX_COMPARE, MIN_COMPARE, type CompareType, type Dataset } from "@/domains/market";
 import { formatPercent, formatUsdExact } from "@/shared/lib/format";
+import { ErrorBoundary, SurfaceFallback } from "@/shared/ui/error-boundary";
 import { RawTable } from "./ui/raw-table";
 import { summarize } from "./ui/summary";
 import { seriesFor } from "./series";
 
-const RadarView = lazy(() => import("./ui/radar"));
+// React.lazy caches a failed import for good, so a retry needs a fresh lazy component (see `retry` below).
+const loadRadar = () => import("./ui/radar");
+let RadarView = lazy(loadRadar);
 
 export type ComparisonSelection = { compareType: CompareType | null; compare: string[] };
 
@@ -30,6 +33,7 @@ export function MarketComparison({
   onChange: (selection: ComparisonSelection) => void;
 }) {
   const name = useId();
+  const [attempt, setAttempt] = useState(0); // see the map: re-renders so the fresh lazy component replaces the rejected one
   // The URL only holds a valid comparison (2-4 ids), so a half-made selection lives here until it becomes valid.
   const propsKey = keyOf(compareType, compare);
   const [seenKey, setSeenKey] = useState(propsKey);
@@ -121,9 +125,21 @@ export function MarketComparison({
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
           <div>
             <div className="h-[340px]" role="group" aria-label={`Radar chart comparing ${comparison.entities.map((e) => e.name).join(", ")} on revenue, growth and attainment. The table has the exact values.`}>
-              <Suspense fallback={<p className="p-4 text-sm text-muted">Loading chart…</p>}>
-                <RadarView comparison={comparison} />
-              </Suspense>
+              <ErrorBoundary surface="radar" fallback={(retry) => (
+                  <SurfaceFallback
+                    title="The radar could not be drawn."
+                    detail="The table below has every value."
+                    retry={() => {
+                      RadarView = lazy(loadRadar);
+                      setAttempt((n) => n + 1);
+                      retry();
+                    }}
+                  />
+                )}>
+                <Suspense fallback={<p className="p-4 text-sm text-muted">Loading chart…</p>}>
+                  <RadarView key={attempt} comparison={comparison} />
+                </Suspense>
+              </ErrorBoundary>
             </div>
             <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs" aria-label="Series">
               {comparison.entities.map((e, i) => (
