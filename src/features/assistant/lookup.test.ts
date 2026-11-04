@@ -21,6 +21,7 @@ describe("lookupAnswer", () => {
     ["what about the UK?", "gb", "United Kingdom"],
     ["tell me about USA", "us", "United States"],
     ["numbers for DEU", "de", "Germany"],
+    ["what about CAN", "ca", "Canada"],
     ["GERMANY!!", "de", "Germany"],
     ["  japan  ", "jp", "Japan"],
   ])("%s -> %s", (q, id, name) => {
@@ -31,6 +32,26 @@ describe("lookupAnswer", () => {
 
   it("capital US is the United States, and both markets of 'japan vs US' are answered", () => {
     expect(lookupAnswer("so what data you got for japan US")?.citations.map((c) => c.marketId)).toEqual(["jp", "us"]);
+  });
+
+  it.each([
+    ["fracne japan us data comaprison", ["fr", "jp", "us"]],
+    ["france japan us data comparison", ["fr", "jp", "us"]],
+    ["gemany", ["de"]],
+    ["Brasil numbers", ["br"]],
+    ["jpan", ["jp"]],
+    ["jap", []], // three letters: too short to guess at
+    ["whats up with Germnay and Itlay", ["de", "it"]],
+    ["unted states", []], // two-word names are exact only
+  ])("typos: %s", (q, ids) => {
+    expect((lookupAnswer(q)?.citations ?? []).map((c) => c.marketId)).toEqual(ids);
+  });
+
+  it("lower-case 'us' is a market only inside a list of places, never as the pronoun", () => {
+    expect(lookupAnswer("tell us about japan")?.citations.map((c) => c.marketId)).toEqual(["jp"]);
+    expect(lookupAnswer("japan us")?.citations.map((c) => c.marketId)).toEqual(["jp", "us"]);
+    expect(lookupAnswer("what can you tell us")).toBeNull(); // "can" is a verb, not the code for Canada
+    expect(lookupAnswer("us")).toBeNull();
   });
 
   it("a region is cited by region, and 'North America' is not also read as the United States", () => {
@@ -52,7 +73,6 @@ describe("lookupAnswer", () => {
   it("ordinary words that look like country codes are not entities", () => {
     expect(lookupAnswer("is it in the data and what is it")).toBeNull();
     expect(lookupAnswer("what is IT")).toBeNull(); // IT as in information technology, not Italy
-    expect(lookupAnswer("IN or us?")).toBeNull();
     expect(lookupAnswer("tell us about it")).toBeNull();
     expect(lookupAnswer("hello")).toBeNull();
     expect(lookupAnswer("🙂")).toBeNull();

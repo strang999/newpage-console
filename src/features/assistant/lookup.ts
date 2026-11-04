@@ -15,6 +15,40 @@ const WORD_AFTER = "(?![\\p{L}\\p{N}])";
 const wordRe = (term: string) => new RegExp(`${WORD_BEFORE}${escape(term)}${WORD_AFTER}`, "iu");
 
 type Hit = { scope: Scope; at: number };
+type Found = { index: number; length: number };
+
+/** Edit distance counting a swap of two neighbouring letters as one edit ("frnace" -> "france"). */
+function editDistance(a: string, b: string): number {
+  const d: number[][] = Array.from({ length: a.length + 1 }, (_, i) => Array.from({ length: b.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)));
+  for (let i = 1; i <= a.length; i += 1) {
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      let best = Math.min((d[i - 1]?.[j] ?? 0) + 1, (d[i]?.[j - 1] ?? 0) + 1, (d[i - 1]?.[j - 1] ?? 0) + cost);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) best = Math.min(best, (d[i - 2]?.[j - 2] ?? 0) + 1);
+      (d[i] as number[])[j] = best;
+    }
+  }
+  return d[a.length]?.[b.length] ?? Infinity;
+}
+
+/**
+ * Where `name` appears in the question: an exact whole-word match, or for a single word of five letters or more a
+ * close misspelling (one edit, two from eight letters: "fracne", "gemany", "Brasil"). Short names, two-word names
+ * and aliases ("UK") are exact only, so ordinary words are not mistaken for them.
+ */
+function locate(q: string, name: string): Found | null {
+  const exact = wordRe(name).exec(q);
+  if (exact) return { index: exact.index, length: exact[0].length };
+  if (name.length < 5 || /\s/.test(name)) return null;
+  const allowed = name.length >= 8 ? 2 : 1;
+  for (const word of q.matchAll(/\p{L}+/gu)) {
+    const w = word[0].toLowerCase();
+    if (Math.abs(w.length - name.length) <= allowed && editDistance(w, name.toLowerCase()) <= allowed) return { index: word.index ?? 0, length: w.length };
+  }
+  return null;
+}
+
+const NOT_A_MARKET_BEFORE_US = new Set(["tell", "show", "give", "let", "send", "help", "join", "between", "among", "hello", "hi", "thank", "thanks"]);
 
 /** Entities a question names, in the order they appear: markets, regions and products (a product narrows the market before it). */
 function findEntities(question: string, d: Dataset): Scope[] {
@@ -22,23 +56,37 @@ function findEntities(question: string, d: Dataset): Scope[] {
   const hits: Hit[] = [];
   // Regions first and masked out, so "North America" is not also read as the alias "america" for the United States.
   for (const r of d.regions) {
-    for (const term of new Set([r.name, r.id])) {
-      const m = wordRe(term).exec(q);
-      if (m) {
-        hits.push({ scope: { regionId: r.id }, at: m.index });
-        q = q.slice(0, m.index) + " ".repeat(m[0].length) + q.slice(m.index + m[0].length);
+    const m = [r.name, r.id].map((term) => locate(q, term)).find(Boolean);
+    if (m) {
+      hits.push({ scope: { regionId: r.id }, at: m.index });
+      q = q.slice(0, m.index) + " ".repeat(m.length) + q.slice(m.index + m.length);
+    }
+  }
+  const products = d.products.filter((p) => locate(q, p.name));
+  const marketHits: { id: string; regionId: string; at: number }[] = [];
+  for (const mk of d.markets) {
+    // Codes count only in capitals ("CAN", "JPN"): lower-case "can" is a verb. Two-letter codes are not matched at all,
+    // because "IT" and "IN" are ordinary words (and "IT" is not Italy).
+    const code = new RegExp(`${WORD_BEFORE}${mk.iso3}${WORD_AFTER}`, "u").exec(q);
+    const m = [mk.name, ...(MARKET_ALIASES[mk.id] ?? [])].map((t) => locate(q, t)).find(Boolean) ?? (code ? { index: code.index, length: 3 } : null);
+    if (m) marketHits.push({ id: mk.id, regionId: mk.regionId, at: m.index });
+  }
+  // "us": the pronoun on its own, but the United States when it sits in a list of other places ("france japan us data").
+  // Capital "US" always counts.
+  const us = d.markets.find((m) => m.id === "us");
+  if (us && !marketHits.some((h) => h.id === "us")) {
+    for (const word of q.matchAll(/(?<![\p{L}\p{N}])us(?![\p{L}\p{N}])/giu)) {
+      const before = /(\p{L}+)\W*$/u.exec(q.slice(0, word.index))?.[1]?.toLowerCase();
+      const capital = word[0] === "US";
+      if (capital || ((marketHits.length > 0 || hits.length > 0) && !(before && NOT_A_MARKET_BEFORE_US.has(before)))) {
+        marketHits.push({ id: "us", regionId: us.regionId, at: word.index ?? 0 });
+        break;
       }
     }
   }
-  const products = d.products.filter((p) => wordRe(p.name).test(q));
-  for (const mk of d.markets) {
-    const terms = [mk.name, mk.iso3, ...(MARKET_ALIASES[mk.id] ?? [])];
-    // Two-letter codes are deliberately not matched: "IT" and "IN" are ordinary words (and "IT" is not Italy).
-    // "US" counts only in capitals: lower-case "us" is the pronoun.
-    const m = terms.map((t) => wordRe(t).exec(q)).find(Boolean) ?? (mk.id === "us" ? /(?<![\p{L}\p{N}])US(?![\p{L}\p{N}])/u.exec(q) : null);
-    if (!m) continue;
-    if (products.length === 0) hits.push({ scope: { marketId: mk.id, regionId: mk.regionId }, at: m.index });
-    else for (const p of products) hits.push({ scope: { marketId: mk.id, regionId: mk.regionId, productId: p.id }, at: m.index });
+  for (const h of marketHits) {
+    if (products.length === 0) hits.push({ scope: { marketId: h.id, regionId: h.regionId }, at: h.at });
+    else for (const p of products) hits.push({ scope: { marketId: h.id, regionId: h.regionId, productId: p.id }, at: h.at });
   }
   return hits.sort((a, b) => a.at - b.at).map((h) => h.scope).slice(0, 4);
 }
