@@ -102,7 +102,9 @@ The simulated-mobile LCP went from 4.2 s to 2.7 s after the chart and the map st
 
 ## d. Front-end approach and decisions
 
-> Sections d to j carry a factual basis from the implementation. Where it is a personal judgment, the marker below says so.
+I have tested the edge cases of real AI products before, streaming most of all, so I built this chat the way I would build the real one, only against a mock backend. The decisions below start from that: the streaming part is where most of my time went, and the dashboard is built on the same idea that every number must be checkable.
+
+> The topic paragraphs below are still facts from the implementation. The ones marked with the comment are the ones I rewrite in my own words.
 
 <!-- ANTON: rewrite in your own words -->
 **Framework.** Next.js App Router. Basis: server component loads and validates the dataset, streaming route handler lives beside the UI, one deployable artifact on Vercel. Considered: Remix and TanStack Start (comparable; I would not get anything here that the App Router does not give me), plain Vite SPA (no server for the chat route and no server-rendered first view).
@@ -165,11 +167,14 @@ Skipped or only partly done: no ADR folder (decisions are in the feature records
 
 ## i. How I used AI tools
 
-<!-- ANTON: rewrite in your own words -->
-Basis from how this repo was actually built: I wrote a plan first (phases P0 to P10, each with acceptance criteria and gates) and then had Claude Code implement it phase by phase in one repository. Each phase went through the same gates: typecheck, lint, boundaries, unit tests, build, e2e, a check of the running app in a browser, then one read-only reviewer subagent with a fixed template and a JSON verdict (defects versus incompletes), then a commit. Review verdicts came back failing on most phases and the defects were fixed before moving on; they are listed in the feature records and `docs/engineering/STATUS.md`. Rules for the agent live in `AGENTS.md` and `docs/engineering/` so the standard is written down rather than remembered. What the agent was not allowed to do: weaken a check to get green, flip the repo to public, send email, add stretch goals early, or run parallel implementation agents.
+I used Claude Code for almost everything, and I tried to use it the way I would manage a junior who is fast but needs rules.
 
-<!-- ANTON: rewrite in your own words -->
-Where I did not trust generated output: the canned assistant answers (checked against the data and corrected), numbers in tests (recomputed independently rather than copied from the implementation), and this README's judgment sections, which need my own words.
+First I wrote the plan myself: phases from foundation to release, and for each phase what "done" means. Then Claude Code built it one phase at a time. Every phase went through the same gates before the next one started: typecheck, lint, module boundaries, unit tests, build, end-to-end tests, a look at the running app in a real browser, and then one independent reviewer agent that only reads and gives a verdict. Most phases failed that first review, and the defects were fixed before moving on. The list is in `docs/engineering/features/` and `docs/engineering/STATUS.md`. The rules for the agent are written in `AGENTS.md` and `docs/engineering/`, so the standard lives in the repo and not in my head.
+
+Do's: write the plan and the acceptance criteria first, keep the rules in files, make the agent show evidence (test output, a screenshot, a number) and not just say it is done, use a separate reviewer.
+Don'ts: let the agent weaken a test to get green, let several agents write code in parallel, add extras before the required work is committed, trust a number it wrote in a test without recomputing it.
+
+Where I did not trust the output: the canned assistant answers (five of them contradicted the data, and I corrected them with a documented override), the numbers in tests (recomputed independently), and flaky tests (I looked for the cause instead of re-running until green; one was a stream left running into the next test).
 
 ## j. What I would do with more time
 
@@ -192,7 +197,11 @@ All four are covered by unit tests and by [`tests/e2e/stretch.spec.ts`](tests/e2
 
 ## k. A note on the writing
 
-The assignment asks for my thoughts rather than generated text. The implementation facts above are checked against the repo; the paragraphs marked `<!-- ANTON: rewrite in your own words -->` are first drafts to be replaced with my own reasoning before submission.
+What I wanted to show here is that I know what breaks in AI interfaces. The backend is a mock, but I tried to cover most of the real streaming edge cases anyway: retries, stop, a stream that dies in the middle, a stale reply from an old request, a page refresh while an answer is still coming, malformed events. One I know how to cover but could not honestly build here is several chat sessions open at once (two tabs, or a phone and a laptop). With a mock there is no server state to disagree about, so I would only be guessing, and I would rather leave it out and say so.
+
+I really wanted to connect a real LLM. I have a lot of experience with that, and it would have let me improve the quality of the answers and play with the hard parts (long answers, tool calls, resuming a stream for real). The assignment says the intelligence should be faked, so I kept to that and spent the time on the surface instead.
+
+Honestly, it was fun.
 
 ## Attributions
 
