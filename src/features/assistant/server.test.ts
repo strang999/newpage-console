@@ -97,6 +97,7 @@ describe("route cancellation", () => {
     await vi.advanceTimersByTimeAsync(40);
     await reader.read();
     await reader.cancel();
+    await vi.advanceTimersByTimeAsync(0); // let the generator observe the cancellation before counting
     expect(vi.getTimerCount()).toBe(0);
     await vi.advanceTimersByTimeAsync(2000);
     expect(vi.getTimerCount()).toBe(0);

@@ -16,6 +16,7 @@ import "@/shared/lib/zod-config";
 import { z } from "zod";
 import fixtures from "@/data/starter/fixtures.json";
 import overrides from "@/data/overrides/fixtures.local.json";
+import { lookupAnswer } from "./lookup";
 
 type Fixture = {
   id: string;
@@ -42,7 +43,12 @@ function pickFixture(question: string): Fixture {
   // keyword, otherwise "Germany next year" would answer about Germany instead of abstaining. Original order is
   // kept inside each group.
   const hit = list.find((f) => f.kind === "error" && matches(f)) ?? list.find((f) => f.kind === "abstain" && matches(f)) ?? list.find(matches);
-  return withOverride(hit ?? (fixtures.default as Fixture));
+  if (hit) return withOverride(hit);
+  // No prepared answer: a question that names a market, region or product gets a cited lookup of its figures
+  // instead of the generic "not enough data" reply. Anything else still gets the default.
+  const found = lookupAnswer(question);
+  if (found) return { id: "lookup", kind: "normal", answer: { text: found.text, citations: found.citations, confidence: "high" } };
+  return withOverride(fixtures.default as Fixture);
 }
 
 const TOKEN_DELAY_MS = 35;
