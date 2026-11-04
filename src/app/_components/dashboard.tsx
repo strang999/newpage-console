@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { AssistantPanel } from "@/features/assistant";
 import { MarketExplorer } from "@/features/market-explorer";
+import { MarketComparison } from "@/features/market-comparison";
 import { MarketMap } from "@/features/market-map";
 import { PortfolioOverview } from "@/features/portfolio-overview";
 import { useViewState } from "../_url/use-view-state";
@@ -51,6 +52,13 @@ function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof use
         selectedMarket={state.market}
         onMetricChange={(metric) => navigate({ metric })}
         onSelectMarket={(market) => navigate({ market })}
+      />
+      <MarketComparison
+        dataset={dataset}
+        period={state.period}
+        compareType={state.compareType}
+        compare={state.compare}
+        onChange={(selection) => navigate(selection)}
       />
       <PortfolioOverview dataset={dataset} period={state.period} onSelectMarket={(market) => navigate({ market })} />
       </div>

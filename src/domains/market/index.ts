@@ -23,3 +23,5 @@ export { numericIdForIso3 } from "./geo";
 export { buildMapScale } from "./map-scale";
 export type { MapScale, ScaleKind } from "./map-scale";
 export { STATUS_META } from "./status";
+export { buildComparison } from "./comparison";
+export type { AxisId, Comparison, ComparisonAxis, ComparisonEntity } from "./comparison";

@@ -48,6 +48,12 @@
   --scale-cat-2: #c9473f;
   --scale-nodata: #e4e7ec;
 
+  /* Comparison series: hue plus a distinct dash pattern per series */
+  --series-1: #1d4ed8;
+  --series-2: #b45309;
+  --series-3: #0f766e;
+  --series-4: #be185d;
+
   /* Focus */
   --color-focus: #1d4ed8;
   --focus-ring: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-focus);
