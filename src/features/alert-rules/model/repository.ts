@@ -1,4 +1,5 @@
-import { z } from "@/shared/lib/zod";
+import "@/shared/lib/zod-config";
+import { z } from "zod";
 import { alertRuleSchema, type AlertRule } from "@/domains/market";
 import { applyOperation, type Operation } from "./operations";
 

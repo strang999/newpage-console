@@ -1,4 +1,5 @@
-import { z } from "@/shared/lib/zod";
+import "@/shared/lib/zod-config";
+import { z } from "zod";
 
 /** Citation as defined by data/starter/CONTRACT.md: pointers into data.json. Any field may be absent. */
 export const citationSchema = z.object({

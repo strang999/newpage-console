@@ -1,4 +1,5 @@
-import { z } from "@/shared/lib/zod";
+import "@/shared/lib/zod-config";
+import { z } from "zod";
 import { marketRows, type MarketRow } from "./metrics";
 import { displayOneDecimal } from "./rounding";
 import type { Dataset } from "./schema";

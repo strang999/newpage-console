@@ -1,4 +1,5 @@
-import { z } from "@/shared/lib/zod";
+import "@/shared/lib/zod-config";
+import { z } from "zod";
 import { alertRuleSchema, type AlertRule } from "@/domains/market";
 
 /** The one contract between the client and the mock endpoint, and the pure reducer both optimistic UI and storage use. */

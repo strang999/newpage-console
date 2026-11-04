@@ -1,18 +1,18 @@
 {
-  "measuredAt": "2026-11-04T12:49:42.561Z",
+  "measuredAt": "2026-11-04T12:53:31.326Z",
   "node": "v22.22.0",
   "pages": {
     "/ (executive)": {
       "scripts": 13,
-      "raw": 1091688,
-      "gzip": 306449,
-      "brotli": 260972
+      "raw": 809601,
+      "gzip": 246372,
+      "brotli": 214445
     },
     "/?mode=analyst": {
       "scripts": 13,
-      "raw": 1091688,
-      "gzip": 306449,
-      "brotli": 260972
+      "raw": 809601,
+      "gzip": 246372,
+      "brotli": 214445
     }
   },
   "lazy": [
@@ -31,11 +31,11 @@
       "brotli": 59004
     },
     {
-      "file": "04hfgb7_md7v6.js",
+      "file": "0et91908fqk2r.js",
       "label": "other lazy chunk",
-      "raw": 55489,
-      "gzip": 18949,
-      "brotli": 17140
+      "raw": 55536,
+      "gzip": 18998,
+      "brotli": 17160
     },
     {
       "file": "19pyde-7f6yu5.js",

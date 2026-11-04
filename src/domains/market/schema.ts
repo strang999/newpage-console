@@ -1,4 +1,5 @@
-import { z } from "@/shared/lib/zod";
+import "@/shared/lib/zod-config";
+import { z } from "zod";
 
 const periodSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "period must be YYYY-MM");
 const money = z.number().finite().nonnegative();
