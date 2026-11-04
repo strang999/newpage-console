@@ -72,7 +72,7 @@ test("switching audience keeps every selection and puts the mode in the URL", as
   await expect(a.heatmap).toBeVisible();
   await expect(a.comparison).toBeVisible();
   await expect(a.denseTable).toBeVisible();
-  await expect(page.getByRole("radio", { name: "Growth" })).toBeChecked();
+  await expect(page.getByRole("radio", { name: "Growth", exact: true })).toBeChecked();
 
   await page.locator("label", { hasText: "Executive" }).click();
   await expect(page).toHaveURL(/\?region=eu&market=de&period=2026-03&metric=growth$/);

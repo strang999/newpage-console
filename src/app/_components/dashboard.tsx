@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { AlertRules } from "@/features/alert-rules";
 import { AssistantPanel } from "@/features/assistant";
 import { ExecutiveSummary } from "@/features/executive-summary";
 import { MarketComparison } from "@/features/market-comparison";
@@ -111,6 +112,7 @@ function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof use
               onSelect={({ market, period }) => navigate({ market, period })}
             />
             <MarketComparison dataset={dataset} period={state.period} compareType={state.compareType} compare={state.compare} onChange={(selection) => navigate(selection)} />
+            <AlertRules dataset={dataset} />
           </>
         ) : (
           <>

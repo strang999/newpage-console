@@ -29,3 +29,5 @@ export { buildHeatmap, classifyGap, describeCell, formatGapPts, HEATMAP_BOUNDS, 
 export type { Heatmap, HeatmapCell } from "./heatmap";
 export { sortMarketRows, topMovers, topRisks } from "./highlights";
 export type { MoverItem, RiskItem, SortDirection, SortKey } from "./highlights";
+export { alertMetricSchema, alertRuleInputSchema, alertRuleSchema, evaluateRule, THRESHOLD_BOUNDS, unknownMarketIds } from "./alerts";
+export type { AlertMetric, AlertRule, AlertRuleInput, RuleEvaluation } from "./alerts";
