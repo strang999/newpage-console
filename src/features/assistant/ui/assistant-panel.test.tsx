@@ -2,7 +2,12 @@
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AssistantPanel } from "./assistant-panel";
+import raw from "@/data/starter/data.json";
+import { datasetSchema } from "@/domains/market";
+import { AssistantPanel as Panel } from "./assistant-panel";
+
+const dataset = datasetSchema.parse(raw);
+const AssistantPanel = ({ onOpenEvidence = () => undefined }: { onOpenEvidence?: Parameters<typeof Panel>[0]["onOpenEvidence"] }) => <Panel dataset={dataset} onOpenEvidence={onOpenEvidence} />;
 
 afterEach(() => {
   cleanup();
@@ -60,6 +65,9 @@ describe("AssistantPanel", () => {
 
     s.push(frame({ type: "token", value: "Germany fell " }));
     expect(await screen.findByText("Germany fell")).toBeInTheDocument();
+    // No confidence or citations are shown before the done event, only a pending notice.
+    expect(screen.queryByTestId("trust-notice")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Evidence \(/)).not.toBeInTheDocument();
     expect(screen.getByText("Generating… evidence pending")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Stop" })).toBeInTheDocument();
 
@@ -136,3 +144,113 @@ describe("AssistantPanel", () => {
     expect(s.fetchMock).toHaveBeenCalledTimes(1);
   });
 });
+
+/** A fetch that immediately returns a complete answer with the given done event. */
+function stubAnswer(done: object, text = "An answer. ") {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => Promise.resolve(new Response(enc.encode(frame({ type: "token", value: text }) + frame({ type: "done", ...done })), { status: 200, headers: { "content-type": "text/event-stream" } }))),
+  );
+}
+const germanyVeltrix = { marketId: "de", productId: "veltrix", period: "2026-03", label: "Veltrix in Germany, Mar 2026" };
+
+describe("trust surface", () => {
+  it.each([
+    ["high", "High confidence", /confident in this answer/],
+    ["medium", "Medium confidence", /moderately confident/],
+    ["low", "Low confidence", /not confident/],
+  ] as const)("%s confidence shows text and an explanation", async (confidence, label, explanation) => {
+    stubAnswer({ kind: "normal", citations: [], confidence });
+    render(<AssistantPanel />);
+    await ask("germany");
+    const notice = await screen.findByTestId("trust-notice");
+    expect(notice).toHaveTextContent(label);
+    expect(notice).toHaveTextContent(explanation);
+    expect(notice).toHaveAttribute("data-confidence", confidence);
+  });
+
+  it("a low-confidence answer is labelled as uncertain, distinct from abstention", async () => {
+    stubAnswer({ kind: "low_confidence", citations: [], confidence: "low" });
+    render(<AssistantPanel />);
+    await ask("something odd");
+    expect(await screen.findByTestId("trust-notice")).toHaveTextContent(/Low confidence.*uncertain answer/);
+  });
+
+  it("an abstention says the assistant cannot answer and shows no confidence level", async () => {
+    stubAnswer({ kind: "abstain", citations: [], confidence: "low" });
+    render(<AssistantPanel />);
+    await ask("next year");
+    const notice = await screen.findByTestId("trust-notice");
+    expect(notice).toHaveAttribute("data-kind", "abstain");
+    expect(notice).toHaveTextContent("Can't answer from this data");
+    expect(notice).not.toHaveTextContent(/confidence/i);
+  });
+
+  it("citation chips open the evidence drawer with the exact series values and provenance", async () => {
+    stubAnswer({ kind: "normal", citations: [germanyVeltrix], confidence: "high" });
+    render(<AssistantPanel />);
+    await ask("germany");
+    await userEvent.click(await screen.findByRole("button", { name: /Veltrix in Germany, Mar 2026/ }));
+    const dialog = await screen.findByRole("dialog", { name: "Germany · Veltrix · Mar 2026" });
+    expect(within(dialog).getByText("Source: dataset")).toBeInTheDocument();
+    const table = within(dialog).getByRole("table");
+    expect(within(table).getByRole("row", { name: /Actual revenue/ })).toHaveTextContent("$427,196");
+    expect(within(table).getByRole("row", { name: /Forecast \$/ })).toHaveTextContent("$461,648");
+    expect(within(table).getByRole("row", { name: /Prior year/ })).toHaveTextContent("$603,279");
+    expect(within(dialog).getByRole("columnheader", { name: "Feb 2026" })).toBeInTheDocument();
+  });
+
+  it("a market citation shows the supplied snapshot separately, with its anomaly note", async () => {
+    stubAnswer({ kind: "normal", citations: [{ marketId: "de", period: "2026-03", label: "Germany, March dip" }], confidence: "high" });
+    render(<AssistantPanel />);
+    await ask("germany");
+    await userEvent.click(await screen.findByRole("button", { name: /Germany, March dip/ }));
+    const dialog = await screen.findByRole("dialog");
+    const snapshot = within(dialog).getByRole("region", { name: /Supplied snapshot, May 2026/ });
+    expect(snapshot).toHaveTextContent("Off track");
+    expect(snapshot).toHaveTextContent("Market share 8.9%");
+    expect(snapshot).toHaveTextContent("Revenue fell 27% versus the prior month.");
+  });
+
+  it("Open in dashboard hands the host the exact target and closes the drawer", async () => {
+    stubAnswer({ kind: "normal", citations: [germanyVeltrix], confidence: "high" });
+    const onOpenEvidence = vi.fn();
+    render(<AssistantPanel onOpenEvidence={onOpenEvidence} />);
+    await ask("germany");
+    await userEvent.click(await screen.findByRole("button", { name: /Veltrix in Germany/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "Open in dashboard" }));
+    expect(onOpenEvidence).toHaveBeenCalledWith({ region: "eu", market: "de", product: "veltrix", period: "2026-03" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("an unresolvable citation is shown as an unresolved reference, never silently accepted", async () => {
+    stubAnswer({ kind: "normal", citations: [{ marketId: "zz", period: "2026-03", label: "Atlantis" }], confidence: "high" });
+    render(<AssistantPanel />);
+    await ask("germany");
+    const chip = await screen.findByRole("button", { name: /Unresolved reference: Atlantis/ });
+    await userEvent.click(chip);
+    const dialog = await screen.findByRole("dialog", { name: "Unresolved reference" });
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(/could not be verified.*Unknown market/);
+    expect(within(dialog).queryByRole("button", { name: "Open in dashboard" })).not.toBeInTheDocument();
+  });
+
+  it("duplicate citations collapse into one chip", async () => {
+    stubAnswer({ kind: "normal", citations: [germanyVeltrix, { ...germanyVeltrix }], confidence: "high" });
+    render(<AssistantPanel />);
+    await ask("germany");
+    expect(await screen.findByText("Evidence (1)")).toBeInTheDocument();
+  });
+
+  it("a stopped answer shows no confidence and no evidence", async () => {
+    const s = stubFetch();
+    render(<AssistantPanel />);
+    await ask("germany");
+    s.push(frame({ type: "token", value: "Half " }));
+    await screen.findByText("Half");
+    await userEvent.click(screen.getByRole("button", { name: "Stop" }));
+    await screen.findByText(/Stopped\./);
+    expect(screen.queryByTestId("trust-notice")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Evidence \(/)).not.toBeInTheDocument();
+  });
+});
+

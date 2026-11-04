@@ -16,3 +16,6 @@ export {
   serializeViewState,
 } from "./view-state";
 export type { CompareType, MapMetric, Mode, ParamsLike, ParsedViewState, ViewState, ViewStateInput } from "./view-state";
+export { resolveCitation } from "./evidence";
+export type { CitationInput, EvidenceSnapshot, EvidenceTarget, ResolvedEvidence } from "./evidence";
+export { formatPeriodLabel } from "./period";

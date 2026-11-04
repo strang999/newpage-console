@@ -12,6 +12,7 @@ describe("format", () => {
   it.each([
     [22850419, "$22,850,419"],
     [0, "$0"],
+    [-34452, "−$34,452"],
     [null, "N/A"],
   ])("formatUsdExact(%s) = %s", (input, out) => expect(formatUsdExact(input)).toBe(out));
 

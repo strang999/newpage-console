@@ -31,7 +31,7 @@ export function formatUsdAxis(value: number): string {
 
 /** $22,850,419 */
 export function formatUsdExact(value: number | null): string {
-  return value === null ? NOT_AVAILABLE : usdExact.format(value);
+  return value === null ? NOT_AVAILABLE : usdExact.format(value).replace("-", "−");
 }
 
 export function formatInteger(value: number | null): string {

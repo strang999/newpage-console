@@ -1,14 +1,17 @@
 "use client";
 
 import { useId, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import type { CitationInput, Dataset, EvidenceTarget } from "@/domains/market";
 import { useAssistant } from "../model/use-assistant";
 import { SUGGESTED_PROMPTS } from "../model/prompts";
+import { EvidenceDrawer } from "./evidence-drawer";
 import { MessageView } from "./message-view";
 
 const MAX_LENGTH = 500;
 
-export function AssistantPanel() {
+export function AssistantPanel({ dataset, onOpenEvidence }: { dataset: Dataset; onOpenEvidence: (target: EvidenceTarget) => void }) {
   const { state, busy, ask, stop, retry } = useAssistant();
+  const [evidence, setEvidence] = useState<CitationInput | null>(null);
   const [draft, setDraft] = useState("");
   const inputId = useId();
   const scroller = useRef<HTMLDivElement>(null);
@@ -89,7 +92,7 @@ export function AssistantPanel() {
         ) : (
           <ol className="flex flex-col gap-4">
             {state.messages.map((m) => (
-              <MessageView key={m.id} message={m} onRetry={retry} />
+              <MessageView key={m.id} message={m} dataset={dataset} onRetry={retry} onOpenCitation={setEvidence} />
             ))}
           </ol>
         )}
@@ -129,6 +132,7 @@ export function AssistantPanel() {
           )}
         </div>
       </form>
+      {evidence && <EvidenceDrawer dataset={dataset} citation={evidence} onClose={() => setEvidence(null)} onOpenInDashboard={onOpenEvidence} />}
     </section>
   );
 }

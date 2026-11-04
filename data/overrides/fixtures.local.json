@@ -1,0 +1,187 @@
+{
+  "version": 1,
+  "description": "Local, documented corrections to narratives in data/starter/fixtures.json that contradict data/starter/data.json. The originals are untouched; the SSE protocol, fixture ids, keywords, kinds and confidences are unchanged. See docs/data-quality.md for each claim, the evidence and the fix.",
+  "overrides": [
+    {
+      "id": "at-risk",
+      "reason": "Original said three markets are at risk and the rest are on or near plan. The status snapshot flags six (2 off track, 4 at risk); UK and France are under forecast.",
+      "answer": {
+        "text": "Six markets are flagged in the status snapshot (May 2026, the latest month in the data). Two are off track: Germany, at 92.2% of forecast and down 9.7% year on year after a sharp dip in March, and Spain, which is 4.7% above forecast but down 4.6% year on year. Four are at risk: the United Kingdom (94.6% of forecast), Italy (93.8%), Brazil (95.5%) and France (96.7%). The other seven markets are on track. The data shows what moved, not why.",
+        "citations": [
+          {
+            "marketId": "de",
+            "period": "2026-05",
+            "label": "Germany, latest period"
+          },
+          {
+            "marketId": "de",
+            "period": "2026-03",
+            "label": "Germany, March dip"
+          },
+          {
+            "marketId": "es",
+            "period": "2026-05",
+            "label": "Spain, latest period"
+          },
+          {
+            "marketId": "gb",
+            "period": "2026-05",
+            "label": "United Kingdom, latest period"
+          },
+          {
+            "marketId": "it",
+            "period": "2026-05",
+            "label": "Italy, latest period"
+          },
+          {
+            "marketId": "br",
+            "period": "2026-05",
+            "label": "Brazil, latest period"
+          },
+          {
+            "marketId": "fr",
+            "period": "2026-05",
+            "label": "France, latest period"
+          }
+        ]
+      }
+    },
+    {
+      "id": "apac-vs-europe",
+      "reason": "Original said Europe is hovering just below 100% and blamed only Germany and Italy. Europe is 95.4% (4.6 points under plan) and the UK and France are also under forecast.",
+      "answer": {
+        "text": "APAC is outgrowing Europe. APAC revenue is up 11.5% year on year and sits at 104.9% of forecast; Europe is up 1.7% and sits at 95.4%, about 4.6 points under plan. China (106.6% of forecast, up 18.2%) and Japan (104.2%, up 9.7%) lead APAC. In Europe, Germany (92.2%), Italy (93.8%), the United Kingdom (94.6%) and France (96.7%) are all under forecast.",
+        "citations": [
+          {
+            "regionId": "apac",
+            "period": "2026-05",
+            "label": "APAC, latest period"
+          },
+          {
+            "marketId": "cn",
+            "period": "2026-05",
+            "label": "China"
+          },
+          {
+            "marketId": "jp",
+            "period": "2026-05",
+            "label": "Japan"
+          },
+          {
+            "regionId": "eu",
+            "period": "2026-05",
+            "label": "Europe, latest period"
+          },
+          {
+            "marketId": "de",
+            "period": "2026-05",
+            "label": "Germany"
+          },
+          {
+            "marketId": "it",
+            "period": "2026-05",
+            "label": "Italy"
+          },
+          {
+            "marketId": "gb",
+            "period": "2026-05",
+            "label": "United Kingdom"
+          },
+          {
+            "marketId": "fr",
+            "period": "2026-05",
+            "label": "France"
+          }
+        ]
+      }
+    },
+    {
+      "id": "forecast-miss",
+      "reason": "Original implied a portfolio-level forecast miss. The portfolio is 100.4% of forecast (+$101,971); shortfalls exist only in individual markets and in Europe and LATAM.",
+      "answer": {
+        "text": "At portfolio level there is no net forecast miss: May 2026 revenue is $22,850,419 against a forecast of $22,748,448, which is 100.4% of plan. The shortfalls are in specific markets: Germany (−$141,058 versus forecast), the United Kingdom (−$117,597), Italy (−$61,722), France (−$55,492) and Brazil (−$52,249). By region, Europe is $341,426 under forecast and LATAM $39,429 under, offset by APAC (+$440,302) and North America (+$42,524). The data does not break out what drives each market's forecast, so it cannot explain why these markets fell short.",
+        "citations": [
+          {
+            "marketId": "de",
+            "period": "2026-05",
+            "label": "Germany"
+          },
+          {
+            "marketId": "gb",
+            "period": "2026-05",
+            "label": "United Kingdom"
+          },
+          {
+            "marketId": "it",
+            "period": "2026-05",
+            "label": "Italy"
+          },
+          {
+            "marketId": "fr",
+            "period": "2026-05",
+            "label": "France"
+          },
+          {
+            "marketId": "br",
+            "period": "2026-05",
+            "label": "Brazil"
+          },
+          {
+            "regionId": "eu",
+            "period": "2026-05",
+            "label": "Europe"
+          },
+          {
+            "regionId": "latam",
+            "period": "2026-05",
+            "label": "LATAM"
+          }
+        ]
+      }
+    },
+    {
+      "id": "summary-long",
+      "reason": "Original called the United States the largest market (China is), described the UK and France as close to plan (both are under forecast) and listed only three markets to watch (six are flagged).",
+      "answer": {
+        "text": "Here's the portfolio at a glance (May 2026, the latest month in the data).\n\nOverall the portfolio is ahead of plan and growing: revenue is $22,850,419, up 7.3% year on year and 100.4% of forecast. APAC and North America carry it. China is the largest market ($3,776,883) and is 6.6% ahead of forecast; the United States ($2,949,131) and Japan ($2,909,296) follow.\n\nAPAC is the growth region at +11.5% and 104.9% of forecast. China and Japan are both ahead of plan, and India (+7.0%, 104.2% of forecast) is also ahead. Australia is on plan (101.5%) with modest growth (+2.4%). North America is up 10.2% and at 101.0% of forecast, with the United States and Canada both on plan.\n\nEurope is the soft spot, up 1.7% and at 95.4% of forecast. Germany fell sharply in early 2026, worst in March, and is still 9.7% below the prior year. Italy, the United Kingdom and France are under forecast, and Spain is above forecast but down 4.6% year on year. LATAM is at 98.0% of forecast: Mexico is on plan and Brazil is 4.5% under it.\n\nSix markets carry an at-risk or off-track flag: Germany, Spain, the United Kingdom, Italy, Brazil and France. Ask me about any of them for the detail behind these numbers.",
+        "citations": [
+          {
+            "regionId": "na",
+            "period": "2026-05",
+            "label": "North America"
+          },
+          {
+            "regionId": "apac",
+            "period": "2026-05",
+            "label": "APAC"
+          },
+          {
+            "regionId": "eu",
+            "period": "2026-05",
+            "label": "Europe"
+          },
+          {
+            "regionId": "latam",
+            "period": "2026-05",
+            "label": "LATAM"
+          },
+          {
+            "marketId": "cn",
+            "period": "2026-05",
+            "label": "China, largest market"
+          },
+          {
+            "marketId": "us",
+            "period": "2026-05",
+            "label": "United States"
+          },
+          {
+            "marketId": "de",
+            "period": "2026-03",
+            "label": "Germany, March dip"
+          }
+        ]
+      }
+    }
+  ]
+}

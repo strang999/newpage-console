@@ -7,12 +7,14 @@
 //
 // Adapted copy of data/starter/reference/chat-route.ts (kept pristine). Changes so far:
 // the fixtures import path, `server-only`, the handler lives here with a thin route wrapper, and pickFixture gives
-// error/abstain fixtures priority (see the comment there), and the handler validates input and stops cleanly
+// error/abstain fixtures priority (see the comment there), documented text corrections from
+// data/overrides/fixtures.local.json, and the handler validates input and stops cleanly
 // when the client aborts. The SSE protocol itself is unchanged.
 
 import "server-only";
 import { z } from "zod";
 import fixtures from "@/data/starter/fixtures.json";
+import overrides from "@/data/overrides/fixtures.local.json";
 
 type Fixture = {
   id: string;
@@ -22,6 +24,15 @@ type Fixture = {
   error?: string;
 };
 
+type Override = { id: string; answer: { text: string; citations: unknown[] } };
+const overrideById = new Map((overrides.overrides as Override[]).map((o) => [o.id, o]));
+
+/** Applies the documented local correction (docs/data-quality.md) on top of the unchanged starter fixture. */
+function withOverride(fixture: Fixture): Fixture {
+  const o = overrideById.get(fixture.id);
+  return o ? { ...fixture, answer: { ...fixture.answer, text: o.answer.text, citations: o.answer.citations } } : fixture;
+}
+
 function pickFixture(question: string): Fixture {
   const q = question.toLowerCase();
   const list = fixtures.fixtures as Fixture[];
@@ -30,7 +41,7 @@ function pickFixture(question: string): Fixture {
   // keyword, otherwise "Germany next year" would answer about Germany instead of abstaining. Original order is
   // kept inside each group.
   const hit = list.find((f) => f.kind === "error" && matches(f)) ?? list.find((f) => f.kind === "abstain" && matches(f)) ?? list.find(matches);
-  return hit ?? (fixtures.default as Fixture);
+  return withOverride(hit ?? (fixtures.default as Fixture));
 }
 
 const TOKEN_DELAY_MS = 35;

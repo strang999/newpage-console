@@ -1,4 +1,7 @@
+import type { CitationInput, Dataset } from "@/domains/market";
 import type { Message } from "../model/reducer";
+import { CitationChips } from "./citation-chips";
+import { TrustNotice } from "./trust-notice";
 
 const STATUS_COPY: Record<Message["status"], string | null> = {
   connecting: "Connecting…",
@@ -9,7 +12,17 @@ const STATUS_COPY: Record<Message["status"], string | null> = {
   error: null,
 };
 
-export function MessageView({ message, onRetry }: { message: Message; onRetry: (id: string) => void }) {
+export function MessageView({
+  message,
+  dataset,
+  onRetry,
+  onOpenCitation,
+}: {
+  message: Message;
+  dataset: Dataset;
+  onRetry: (id: string) => void;
+  onOpenCitation: (citation: CitationInput) => void;
+}) {
   const active = message.status === "connecting" || message.status === "streaming";
   const canRetry = message.status === "stopped" || message.status === "incomplete" || message.status === "error";
   const statusCopy =
@@ -50,10 +63,14 @@ export function MessageView({ message, onRetry }: { message: Message; onRetry: (
             {message.failure.message}
           </p>
         )}
-        {message.status === "complete" && (
-          <p className="mt-2 text-xs" data-testid="answer-status">
-            Answer complete.
-          </p>
+        {message.status === "complete" && message.meta && (
+          <>
+            <TrustNotice meta={message.meta} />
+            <CitationChips dataset={dataset} citations={message.meta.citations} onOpen={onOpenCitation} />
+            <p className="mt-2 text-xs" data-testid="answer-status">
+              Answer complete.
+            </p>
+          </>
         )}
 
         {canRetry && (

@@ -46,7 +46,7 @@ function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof use
       <PortfolioOverview dataset={dataset} period={state.period} onSelectMarket={(market) => navigate({ market })} />
       </div>
       <aside aria-label="Assistant" className="xl:sticky xl:top-4 xl:h-[calc(100vh-2rem)] xl:self-start">
-        <AssistantPanel />
+        <AssistantPanel dataset={dataset} onOpenEvidence={(t) => navigate({ region: t.region, market: t.market, product: t.product, period: t.period })} />
       </aside>
     </div>
   );
