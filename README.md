@@ -2,6 +2,8 @@
 
 A streaming, evidence-citing assistant next to an analytical dashboard, over a synthetic market-operations dataset (13 markets, 24 months, May 2026 latest). Next.js 16 App Router, React 19, strict TypeScript.
 
+Video walkthrough (2.5 min): https://drive.google.com/file/d/19s3bm8LoqqksU7kkIQumU1AET4gTUIe1/view
+
 Screenshots are in [`docs/screenshots/`](docs/screenshots) (1440 px and 390 px, both audiences, the assistant in its answer / streaming / abstain / error / evidence-drawer states, map, radar, heatmap, alert rules). They are regenerated with `SCREENSHOTS=1 pnpm e2e --grep "README screenshots"`.
 
 ![Analyst view](docs/screenshots/analyst-desktop.png)
