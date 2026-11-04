@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { gotoReady } from "./helpers";
+import { gotoReady, shot } from "./helpers";
 
 const section = (page: Page) => page.getByRole("region", { name: /^Compare (markets|regions)$/ });
 const valuesTable = (page: Page) => page.getByRole("table", { name: /Raw revenue/ });
@@ -34,7 +34,7 @@ test("pick three markets: the URL holds them, the radar table shows raw values, 
   await expect(table.getByRole("row", { name: /Germany/ })).toContainText("$1,211,930");
   await expect(page).toHaveURL(/\?period=2026-03&compareType=market&compare=de,it,gb$/);
 
-  await page.screenshot({ path: `docs/evidence/P5/comparison-${testInfo.project.name}.png`, fullPage: true });
+  await shot(page, `docs/evidence/P5/comparison-${testInfo.project.name}.png`, { fullPage: true });
   expect(errors).toEqual([]);
 });
 

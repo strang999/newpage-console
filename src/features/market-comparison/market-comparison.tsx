@@ -33,19 +33,29 @@ export function MarketComparison({
   // The URL only holds a valid comparison (2-4 ids), so a half-made selection lives here until it becomes valid.
   const propsKey = keyOf(compareType, compare);
   const [seenKey, setSeenKey] = useState(propsKey);
-  const [lastSent, setLastSent] = useState<string | null>(null);
+  // Keys of our own writes whose URL change has not arrived yet, oldest first. Several can be in flight at once.
+  const [inFlight, setInFlight] = useState<string[]>([]);
   const [draft, setDraft] = useState<Draft>({ type: compareType ?? "market", ids: [...compare] });
   if (propsKey !== seenKey) {
-    // The URL changed. If it was not our own write (back/forward, a link, the assistant), adopt it.
     setSeenKey(propsKey);
-    if (propsKey !== lastSent) setDraft({ type: compareType ?? "market", ids: [...compare] });
-    setLastSent(null); // the marker only covers the one URL change our own write causes
+    const index = inFlight.indexOf(propsKey);
+    if (index >= 0) {
+      // The echo of our own write: keep the draft and forget this write and any older ones.
+      setInFlight(inFlight.slice(index + 1));
+    } else {
+      // Not ours (back/forward, a link, the assistant): adopt it.
+      setDraft({ type: compareType ?? "market", ids: [...compare] });
+      setInFlight([]);
+    }
   }
 
   function update(next: Draft) {
     setDraft(next);
     const valid = next.ids.length >= MIN_COMPARE;
-    setLastSent(keyOf(valid ? next.type : null, next.ids));
+    const sent = keyOf(valid ? next.type : null, next.ids);
+    // A write that leaves the URL as it is produces no URL change, so there is no echo to wait for.
+    const expectsEcho = sent !== (inFlight.at(-1) ?? propsKey);
+    if (expectsEcho) setInFlight([...inFlight, sent]);
     onChange(valid ? { compareType: next.type, compare: next.ids } : { compareType: null, compare: [] });
   }
 
@@ -132,6 +142,9 @@ export function MarketComparison({
                 <li key={line}>{line}</li>
               ))}
             </ul>
+            {comparison.entities.some((e) => Object.values(e.scores).includes(null)) && (
+              <p className="text-xs text-muted">Some values are N/A (a zero denominator) and are not plotted on the radar.</p>
+            )}
             <details className="text-xs text-muted" open>
               <summary className="cursor-pointer font-medium text-[var(--color-text)]">How the radar is scaled</summary>
               <p className="mt-1">

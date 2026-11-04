@@ -89,6 +89,45 @@ describe("MarketComparison", () => {
     expect(await table()).toBeInTheDocument();
   });
 
+  it("unchecking down to one keeps the draft when the URL echoes the cleared state (the echo guard)", async () => {
+    const { onChange, rerender } = setup({ compareType: "market", compare: ["de", "it"] });
+    await userEvent.click(screen.getByRole("checkbox", { name: "Italy" }));
+    expect(onChange).toHaveBeenLastCalledWith({ compareType: null, compare: [] });
+    rerender({ compareType: null, compare: [] }); // the URL echoes our write: the half-made draft must survive
+    expect(screen.getByRole("checkbox", { name: "Germany" })).toBeChecked();
+    expect(screen.getByText("1 selected · select at least 2")).toBeInTheDocument();
+  });
+
+  it("switching type while valid keeps the new type when the URL echoes the cleared state", async () => {
+    const { rerender } = setup({ compareType: "market", compare: ["de", "it"] });
+    await userEvent.click(screen.getByRole("radio", { name: "Regions" }));
+    rerender({ compareType: null, compare: [] });
+    expect(screen.getByRole("radio", { name: "Regions" })).toBeChecked();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(4);
+    expect(screen.getByText("0 selected · select at least 2")).toBeInTheDocument();
+  });
+
+  it("two quick edits before any URL change arrives: neither echo overwrites the draft", async () => {
+    const { rerender } = setup();
+    await userEvent.click(screen.getByRole("checkbox", { name: "Germany" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Italy" })); // write 1: valid [de, it]
+    await userEvent.click(screen.getByRole("checkbox", { name: "Italy" })); // write 2: back to one (half-made)
+    rerender({ compareType: "market", compare: ["de", "it"] }); // echo of write 1 arrives late
+    expect(screen.getByRole("checkbox", { name: "Germany" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Italy" })).not.toBeChecked();
+    rerender({ compareType: null, compare: [] }); // echo of write 2
+    expect(screen.getByRole("checkbox", { name: "Germany" })).toBeChecked();
+    expect(screen.getByText("1 selected · select at least 2")).toBeInTheDocument();
+  });
+
+  it("a write that does not change the URL leaves no stale marker: a later external change is adopted", async () => {
+    const { rerender } = setup();
+    await userEvent.click(screen.getByRole("checkbox", { name: "Germany" })); // URL stays empty, so no echo is expected
+    rerender({ compareType: "market", compare: ["us", "ca"] }); // an external link
+    expect(screen.getByRole("checkbox", { name: "United States" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Germany" })).not.toBeChecked();
+  });
+
   it("at 4 selected the rest are disabled (max 4), and unchecking re-enables them", async () => {
     setup({ compareType: "market", compare: ["us", "ca", "de", "gb"] });
     expect(screen.getByText(/4 selected \(maximum reached\)/)).toBeInTheDocument();

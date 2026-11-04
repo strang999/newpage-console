@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { gotoReady } from "./helpers";
+import { gotoReady, shot } from "./helpers";
 import { expect, test } from "@playwright/test";
 
 const composer = (page: import("@playwright/test").Page) => page.getByRole("textbox", { name: "Ask about the data" });
@@ -23,7 +23,7 @@ test("a streamed answer grows incrementally, shows pending evidence, then comple
 
   const axe = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
   expect(axe.violations).toEqual([]);
-  await page.screenshot({ path: `docs/evidence/P3/assistant-complete-${testInfo.project.name}.png` });
+  await shot(page, `docs/evidence/P3/assistant-complete-${testInfo.project.name}.png`);
 });
 
 test("Stop mid-answer keeps the partial text and labels evidence unavailable", async ({ page }, testInfo) => {
@@ -137,7 +137,7 @@ test("answer -> confidence -> citation -> evidence drawer -> open in dashboard s
 
   const axe = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
   expect(axe.violations).toEqual([]);
-  await page.screenshot({ path: `docs/evidence/P3/evidence-drawer-${testInfo.project.name}.png` });
+  await shot(page, `docs/evidence/P3/evidence-drawer-${testInfo.project.name}.png`);
 
   // Escape closes the modal and focus returns to the chip that opened it.
   await page.keyboard.press("Escape");

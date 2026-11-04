@@ -5,6 +5,7 @@ import type { AxisId, Comparison } from "@/domains/market";
 import { formatPercent, formatUsdExact } from "@/shared/lib/format";
 import { usePrefersReducedMotion } from "@/shared/lib/use-reduced-motion";
 import { seriesFor } from "../series";
+import { radarData } from "./radar-data";
 
 function rawText(axis: AxisId, entity: Comparison["entities"][number]): string {
   if (axis === "revenue") return formatUsdExact(entity.raw.revenue);
@@ -14,11 +15,7 @@ function rawText(axis: AxisId, entity: Comparison["entities"][number]): string {
 
 export default function RadarView({ comparison }: { comparison: Comparison }) {
   const reducedMotion = usePrefersReducedMotion();
-  const data = comparison.axes.map((axis) => ({
-    axisId: axis.id,
-    axis: axis.label,
-    ...Object.fromEntries(comparison.entities.map((e) => [e.id, e.scores[axis.id] ?? 0])),
-  }));
+  const data = radarData(comparison);
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -39,6 +36,7 @@ export default function RadarView({ comparison }: { comparison: Comparison }) {
               fill={s.color}
               fillOpacity={0.07}
               isAnimationActive={!reducedMotion}
+              connectNulls={false}
             />
           );
         })}
@@ -53,7 +51,7 @@ export default function RadarView({ comparison }: { comparison: Comparison }) {
                 <ul>
                   {comparison.entities.map((e) => (
                     <li key={e.id}>
-                      {e.name}: {rawText(axis.id, e)} <span className="text-muted">(position {Math.round(e.scores[axis.id] ?? 0)})</span>
+                      {e.name}: {rawText(axis.id, e)} <span className="text-muted">({e.scores[axis.id] === null ? "no value, not plotted" : `position ${Math.round(e.scores[axis.id] ?? 0)}`})</span>
                     </li>
                   ))}
                 </ul>

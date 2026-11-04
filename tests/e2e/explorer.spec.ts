@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { gotoReady } from "./helpers";
+import { gotoReady, shot } from "./helpers";
 import { expect, test, type Page } from "@playwright/test";
 
 const children = (page: Page) => page.getByRole("region", { name: /^(Regions|Markets|Products) · select/ });
@@ -38,7 +38,7 @@ test("drill three levels, pick a period, reload restores the view, back walks th
 
   const axe = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
   expect(axe.violations).toEqual([]);
-  await page.screenshot({ path: `docs/evidence/P2/explorer-${testInfo.project.name}.png`, fullPage: true });
+  await shot(page, `docs/evidence/P2/explorer-${testInfo.project.name}.png`, { fullPage: true });
 
   // Back walks every discrete selection in reverse.
   await page.goBack();

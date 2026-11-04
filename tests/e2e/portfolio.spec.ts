@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { gotoReady } from "./helpers";
+import { gotoReady, shot } from "./helpers";
 import { expect, test } from "@playwright/test";
 
 test("portfolio overview shows the verified totals, 13 markets and status text", async ({ page }, testInfo) => {
@@ -30,7 +30,7 @@ test("portfolio overview shows the verified totals, 13 markets and status text",
   expect(axe.violations).toEqual([]);
   expect(errors).toEqual([]);
 
-  await page.screenshot({ path: `docs/evidence/P1/overview-${testInfo.project.name}.png`, fullPage: true });
+  await shot(page, `docs/evidence/P1/overview-${testInfo.project.name}.png`, { fullPage: true });
 });
 
 test("the table scrolls horizontally inside its own region on a narrow viewport", async ({ page }, testInfo) => {
