@@ -10,13 +10,17 @@ Updated: 2026-11-03 (Asia/Bangkok). Execution plan: planning package `PLAN-STRIC
 | P1 / F01 portfolio | done: review PASS, commit 350e7da, CI run 41620554596 green | `features/F01-portfolio.md` |
 | P2 / F02 explorer | done: review FAIL -> stale-closure defect in `useViewState` + 2 test gaps fixed (pending-URL ref, hook tests, exact table values); commit f37807d | `features/F02-explorer.md` |
 | P3a assistant transport + lifecycle | committed b3e6d77 (130 tests, e2e 20 pass locally). P3 review is run once over all three P3 commits after 3c | below |
-| P3b resilience, P3c trust UI | not started | |
+| P3b resilience | implemented, locally verified (159 unit/component tests; e2e 24 pass on clean runs) | below |
+| P3c trust UI | not started | |
 
 ## Next concrete step
 
-P3b: bounded retry (<=2, 500ms->1s + jitter, Retry-After within 90 s budget), 15 s first-event / 15 s idle / 90 s total timeouts, Stop cancels backoff, route hardening (input schema, 400s, stop enqueue after request abort). Then P3c: confidence badge, citations -> evidence drawer -> open in dashboard, data-quality overrides. Then the single P3 review and Anton checkpoint 1.
+P3c: confidence badge, citations -> evidence drawer -> open in dashboard, data-quality overrides. Then the single P3 review and Anton checkpoint 1.
 
 ## Known gaps / limitations
+
+- Local e2e flake source: running `pnpm e2e` twice back to back on Windows can rebuild `.next` under the previous run's still-running server (mass failures at 0 ms). Not an app defect; CI runs once on a clean checkout. Hydration races are handled by `gotoReady` (waits for `data-hydrated`).
+- Automatic retries reuse the attempt id (nothing has been received yet, so there is nothing stale); manual retries get a new attempt id and archive the partial text.
 
 - pnpm scripts on this machine run under Node 20.18.2 (engines warning); Node 22 is used by CI. Not blocking.
 - Light theme only.

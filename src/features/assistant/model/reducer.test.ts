@@ -50,6 +50,20 @@ describe("assistant reducer lifecycle", () => {
   });
 });
 
+describe("automatic retry bookkeeping", () => {
+  it("counts automatic retries while connecting and resets them on a manual retry", () => {
+    const s = run([asked, { type: "retrying", id: "m1", attemptId: "a1", retry: 1 }, { type: "retrying", id: "m1", attemptId: "a1", retry: 2 }]);
+    expect(only(s)).toMatchObject({ status: "connecting", autoRetries: 2 });
+    const failed = run([{ type: "failed", id: "m1", attemptId: "a1", failure: { code: "http", message: "m", retryable: true } }, { type: "retried", id: "m1", attemptId: "a2" }], s);
+    expect(only(failed).autoRetries).toBe(0);
+  });
+
+  it("ignores a late retrying notice once tokens arrived", () => {
+    const s = run([asked, { type: "tokens", id: "m1", attemptId: "a1", text: "x " }, { type: "retrying", id: "m1", attemptId: "a1", retry: 1 }]);
+    expect(only(s).autoRetries).toBe(0);
+  });
+});
+
 describe("retry and stale events", () => {
   it("retry archives the partial answer separately and starts a clean attempt", () => {
     const s = run([

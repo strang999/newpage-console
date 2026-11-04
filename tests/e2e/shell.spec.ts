@@ -1,4 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
+import { gotoReady } from "./helpers";
 import { expect, test } from "@playwright/test";
 
 test("shell renders with landmarks, one h1 and no console errors", async ({ page }) => {
@@ -6,7 +7,7 @@ test("shell renders with landmarks, one h1 and no console errors", async ({ page
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
   page.on("pageerror", (e) => errors.push(e.message));
 
-  await page.goto("/");
+  await gotoReady(page, "/");
   await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
   await expect(page.getByRole("main")).toBeVisible();
 
@@ -26,7 +27,7 @@ test("shell renders with landmarks, one h1 and no console errors", async ({ page
 });
 
 test("chat stream arrives in multiple chunks over time (not one buffered body)", async ({ page }) => {
-  await page.goto("/");
+  await gotoReady(page, "/");
   const result = await page.evaluate(async () => {
     const res = await fetch("/api/chat", {
       method: "POST",

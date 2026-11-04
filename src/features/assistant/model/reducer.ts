@@ -15,6 +15,8 @@ export type Message = {
   /** Present only after a `done` event. Never guessed while streaming or after Stop. */
   meta: DoneMeta | null;
   failure: StreamFailure | null;
+  /** Automatic retries already made for the current attempt (before any token). */
+  autoRetries: number;
   /** Partial answers of earlier attempts, kept separate and never concatenated with the new one. */
   prior: PriorAttempt[];
 };
@@ -25,6 +27,7 @@ export const initialState: AssistantState = { messages: [] };
 export type Action =
   | { type: "asked"; id: string; question: string; attemptId: string }
   | { type: "retried"; id: string; attemptId: string }
+  | { type: "retrying"; id: string; attemptId: string; retry: number }
   | { type: "tokens"; id: string; attemptId: string; text: string }
   | { type: "completed"; id: string; attemptId: string; meta: DoneMeta }
   | { type: "failed"; id: string; attemptId: string; failure: StreamFailure }
@@ -48,7 +51,7 @@ export function reducer(state: AssistantState, action: Action): AssistantState {
       return {
         messages: [
           ...state.messages,
-          { id: action.id, question: action.question, attemptId: action.attemptId, status: "connecting", text: "", meta: null, failure: null, prior: [] },
+          { id: action.id, question: action.question, attemptId: action.attemptId, status: "connecting", text: "", meta: null, failure: null, autoRetries: 0, prior: [] },
         ],
       };
     case "retried":
@@ -59,6 +62,7 @@ export function reducer(state: AssistantState, action: Action): AssistantState {
         text: "",
         meta: null,
         failure: null,
+        autoRetries: 0,
         prior:
           m.status === "stopped" || m.status === "error" || m.status === "incomplete"
             ? m.text
@@ -66,6 +70,8 @@ export function reducer(state: AssistantState, action: Action): AssistantState {
               : m.prior
             : m.prior,
       }));
+    case "retrying":
+      return whileActive(state, action.id, action.attemptId, (m) => (m.status === "connecting" ? { ...m, autoRetries: action.retry } : m));
     case "tokens":
       return whileActive(state, action.id, action.attemptId, (m) => ({ ...m, status: "streaming", text: m.text + action.text }));
     case "completed":

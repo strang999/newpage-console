@@ -3,6 +3,7 @@ import { streamEventSchema, type DoneMeta } from "../model/events";
 
 export type FailureCode =
   | "network" // fetch rejected or the body stream broke
+  | "timeout" // no first event, or the overall deadline passed
   | "http" // non-2xx response
   | "content_type" // 2xx but not text/event-stream
   | "no_body" // streaming body unsupported or missing
@@ -23,13 +24,17 @@ export type StreamFailure = {
 export type AttemptResult =
   | { kind: "done"; meta: DoneMeta; receivedTokens: boolean }
   | { kind: "failed"; failure: StreamFailure; receivedTokens: boolean }
-  /** The connection ended (EOF or a broken stream) after tokens without a `done` event. */
-  | { kind: "incomplete"; receivedTokens: boolean }
+  /** The connection ended (EOF, a broken stream or an idle timeout) after tokens without a `done` event. */
+  | { kind: "incomplete"; receivedTokens: boolean; timedOut?: boolean }
   | { kind: "aborted"; receivedTokens: boolean };
+
+export type AttemptTimeouts = { firstEventMs: number; idleMs: number };
 
 export type AttemptOptions = {
   question: string;
+  /** The caller's signal (user Stop, unmount, overall deadline). Distinct from this attempt's own timeouts. */
   signal: AbortSignal;
+  timeouts?: AttemptTimeouts;
   onToken: (value: string) => void;
   fetchImpl?: typeof fetch;
   endpoint?: string;
@@ -47,10 +52,49 @@ export function parseRetryAfter(header: string | null, now: number = Date.now())
 
 /**
  * One POST /api/chat attempt. Framing is delegated to eventsource-parser; this function owns status/content-type
- * checks, UTF-8 decoding, schema validation and classification. It never retries and never throws for expected failures.
+ * checks, UTF-8 decoding, schema validation, timeouts and classification. It never retries and never throws for
+ * expected failures. A timeout (no first event, or no activity while streaming) cancels only this attempt.
  */
-export async function runAttempt({ question, signal, onToken, fetchImpl = fetch, endpoint = "/api/chat" }: AttemptOptions): Promise<AttemptResult> {
+export async function runAttempt(options: AttemptOptions): Promise<AttemptResult> {
+  const { signal: callerSignal, timeouts } = options;
+  const inner = new AbortController();
+  let timedOut = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  const arm = (ms: number | undefined) => {
+    clearTimeout(timer);
+    if (ms === undefined) return;
+    timer = setTimeout(() => {
+      timedOut = true;
+      inner.abort();
+    }, ms);
+  };
+  const forwardAbort = () => inner.abort();
+  if (callerSignal.aborted) inner.abort();
+  else callerSignal.addEventListener("abort", forwardAbort, { once: true });
+
+  arm(timeouts?.firstEventMs);
+  try {
+    const result = await attemptCore(options, inner.signal, () => arm(timeouts?.idleMs));
+    if (!timedOut) return result;
+    // The caller did not ask to stop; the attempt's own timer fired.
+    if (callerSignal.aborted) return { kind: "aborted", receivedTokens: result.receivedTokens };
+    return result.receivedTokens
+      ? { kind: "incomplete", receivedTokens: true, timedOut: true }
+      : { kind: "failed", receivedTokens: false, failure: { code: "timeout", message: "The assistant did not respond in time.", retryable: true } };
+  } finally {
+    clearTimeout(timer);
+    callerSignal.removeEventListener("abort", forwardAbort);
+  }
+}
+
+async function attemptCore(
+  { question, onToken, fetchImpl = fetch, endpoint = "/api/chat" }: AttemptOptions,
+  signal: AbortSignal,
+  onActivity: () => void,
+): Promise<AttemptResult> {
   let receivedTokens = false;
+  if (signal.aborted) return { kind: "aborted", receivedTokens };
 
   let response: Response;
   try {
@@ -64,6 +108,7 @@ export async function runAttempt({ question, signal, onToken, fetchImpl = fetch,
     if (signal.aborted) return { kind: "aborted", receivedTokens };
     return { kind: "failed", receivedTokens, failure: { code: "network", message: "Could not reach the assistant.", retryable: true } };
   }
+  onActivity();
 
   if (!response.ok) {
     return {
@@ -105,6 +150,7 @@ export async function runAttempt({ question, signal, onToken, fetchImpl = fetch,
         if (signal.aborted) return { kind: "aborted", receivedTokens };
         return { kind: "incomplete", receivedTokens };
       }
+      onActivity();
 
       let parsed: ReturnType<typeof streamEventSchema.safeParse>;
       try {

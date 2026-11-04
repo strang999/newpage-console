@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { AssistantPanel } from "@/features/assistant";
 import { MarketExplorer } from "@/features/market-explorer";
 import { PortfolioOverview } from "@/features/portfolio-overview";
@@ -23,12 +24,17 @@ export function Dashboard() {
   return <DashboardView dataset={data} />;
 }
 
+const noopSubscribe = () => () => undefined;
+
 function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof useDataset>["data"]> }) {
   const { state, navigate } = useViewState(dataset);
   const scope = { regionId: state.region, marketId: state.market, productId: state.product };
 
+  // false in the server HTML, true once React has hydrated. End-to-end tests wait for it before interacting.
+  const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
+
   return (
-    <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_400px]">
+    <div data-hydrated={hydrated} className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_400px]">
       <div className="flex min-w-0 flex-col gap-8">
       <MarketExplorer
         dataset={dataset}

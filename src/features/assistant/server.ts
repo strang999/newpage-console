@@ -7,9 +7,11 @@
 //
 // Adapted copy of data/starter/reference/chat-route.ts (kept pristine). Changes so far:
 // the fixtures import path, `server-only`, the handler lives here with a thin route wrapper, and pickFixture gives
-// error/abstain fixtures priority (see the comment there).
+// error/abstain fixtures priority (see the comment there), and the handler validates input and stops cleanly
+// when the client aborts. The SSE protocol itself is unchanged.
 
 import "server-only";
+import { z } from "zod";
 import fixtures from "@/data/starter/fixtures.json";
 
 type Fixture = {
@@ -31,27 +33,82 @@ function pickFixture(question: string): Fixture {
   return hit ?? (fixtures.default as Fixture);
 }
 
+const TOKEN_DELAY_MS = 35;
+const requestSchema = z.object({ question: z.string().trim().min(1, "question is required").max(500, "question is too long (500 characters max)") });
+
+function badRequest(message: string) {
+  return Response.json({ error: message }, { status: 400, headers: { "Cache-Control": "no-store" } });
+}
+
 export async function POST(req: Request) {
-  const { question = "" } = (await req.json()) as { question?: string };
-  const fixture = pickFixture(question);
+  let payload: unknown;
+  try {
+    payload = await req.json();
+  } catch {
+    return badRequest("Request body must be valid JSON.");
+  }
+  const parsed = requestSchema.safeParse(payload);
+  if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? "Invalid request.");
+
+  const fixture = pickFixture(parsed.data.question);
   const encoder = new TextEncoder();
-  const send = (obj: unknown) => encoder.encode(`data: ${JSON.stringify(obj)}\n\n`);
+  const send = (obj: unknown) => encoder.encode(`data: ${JSON.stringify(obj)}
+
+`);
+
+  let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let wake: (() => void) | undefined;
+  // Called on client abort (request.signal) or stream cancel: stop enqueueing and release the pending timer.
+  const stop = () => {
+    stopped = true;
+    clearTimeout(timer);
+    wake?.();
+  };
+  const pause = (ms: number) =>
+    new Promise<void>((resolve) => {
+      wake = resolve;
+      timer = setTimeout(resolve, ms);
+    });
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
+      const close = () => {
+        try {
+          controller.close();
+        } catch {
+          /* already closed by cancel */
+        }
+      };
+      req.signal.addEventListener(
+        "abort",
+        () => {
+          stop();
+          close();
+        },
+        { once: true },
+      );
+      if (req.signal.aborted) {
+        stop();
+        close();
+        return;
+      }
+
       // Error fixture: emit a single error event and stop.
       if (fixture.kind === "error") {
         controller.enqueue(send({ type: "error", message: fixture.error ?? "Something went wrong." }));
-        controller.close();
+        close();
         return;
       }
 
       // Stream the answer one whitespace-delimited token at a time.
       const tokens = fixture.answer.text.match(/\S+\s*/g) ?? [];
       for (const value of tokens) {
+        if (stopped) return;
         controller.enqueue(send({ type: "token", value }));
-        await new Promise((r) => setTimeout(r, 35)); // simulate token latency
+        await pause(TOKEN_DELAY_MS); // simulate token latency
       }
+      if (stopped) return;
 
       // Final event carries the metadata the trust surface renders.
       controller.enqueue(
@@ -62,7 +119,10 @@ export async function POST(req: Request) {
           confidence: fixture.answer.confidence,
         }),
       );
-      controller.close();
+      close();
+    },
+    cancel() {
+      stop();
     },
   });
 

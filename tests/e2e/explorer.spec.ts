@@ -1,4 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
+import { gotoReady } from "./helpers";
 import { expect, test, type Page } from "@playwright/test";
 
 const children = (page: Page) => page.getByRole("region", { name: /^(Regions|Markets|Products)/ });
@@ -9,7 +10,7 @@ test("drill three levels, pick a period, reload restores the view, back walks th
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
   page.on("pageerror", (e) => errors.push(e.message));
 
-  await page.goto("/");
+  await gotoReady(page, "/");
   await expect(h1(page)).toHaveText("Portfolio overview");
 
   await children(page).getByRole("button", { name: "Europe" }).click();
@@ -57,9 +58,9 @@ test("drill three levels, pick a period, reload restores the view, back walks th
 });
 
 test("an invalid URL is normalized with replace, not push", async ({ page }) => {
-  await page.goto("/");
+  await gotoReady(page, "/");
   const before = await page.evaluate(() => history.length);
-  await page.goto("/?market=zz&period=1999-01&utm_source=x");
+  await gotoReady(page, "/?market=zz&period=1999-01&utm_source=x");
   await expect(page).toHaveURL(/\/$/);
   await expect(h1(page)).toHaveText("Portfolio overview");
   const after = await page.evaluate(() => history.length);
@@ -67,7 +68,7 @@ test("an invalid URL is normalized with replace, not push", async ({ page }) => 
 });
 
 test("breadcrumb and table alternative are keyboard operable", async ({ page }) => {
-  await page.goto("/?region=eu&market=de&period=2026-03");
+  await gotoReady(page, "/?region=eu&market=de&period=2026-03");
   const crumb = page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("button", { name: "Europe" });
   await crumb.focus();
   await page.keyboard.press("Enter");
@@ -85,7 +86,7 @@ test("breadcrumb and table alternative are keyboard operable", async ({ page }) 
 
 test("the chart renders without animation when the user prefers reduced motion", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/?region=eu");
+  await gotoReady(page, "/?region=eu");
   const actual = page.locator(".recharts-line").first().locator("path.recharts-line-curve");
   await expect(actual).toBeVisible();
   const dash = await actual.evaluate((el) => getComputedStyle(el).strokeDasharray);

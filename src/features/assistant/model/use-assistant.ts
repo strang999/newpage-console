@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useReducer, useRef } from "react";
-import { runAttempt, type AttemptResult } from "../stream/consume";
+import type { AttemptResult } from "../stream/consume";
+import { runGeneration } from "../stream/generate";
 import { initialState, isActive, reducer, type AssistantState } from "./reducer";
 
 type Run = { id: string; attemptId: string; controller: AbortController };
@@ -43,9 +44,10 @@ export function useAssistant(): {
       pending.current = { text: "", frame: 0 };
       let result: AttemptResult;
       try {
-        result = await runAttempt({
+        result = await runGeneration({
           question,
           signal: run.controller.signal,
+          onRetrying: (retry) => dispatch({ type: "retrying", id: run.id, attemptId: run.attemptId, retry }),
           onToken: (value) => {
             pending.current.text += value;
             if (!pending.current.frame) {

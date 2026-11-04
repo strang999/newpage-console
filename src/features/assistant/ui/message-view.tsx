@@ -12,7 +12,10 @@ const STATUS_COPY: Record<Message["status"], string | null> = {
 export function MessageView({ message, onRetry }: { message: Message; onRetry: (id: string) => void }) {
   const active = message.status === "connecting" || message.status === "streaming";
   const canRetry = message.status === "stopped" || message.status === "incomplete" || message.status === "error";
-  const statusCopy = STATUS_COPY[message.status];
+  const statusCopy =
+    message.status === "connecting" && message.autoRetries > 0
+      ? `Connection problem. Retrying automatically (attempt ${message.autoRetries + 1} of 3)…`
+      : STATUS_COPY[message.status];
 
   return (
     <li className="flex flex-col gap-2">

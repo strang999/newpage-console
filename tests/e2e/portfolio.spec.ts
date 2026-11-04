@@ -1,4 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
+import { gotoReady } from "./helpers";
 import { expect, test } from "@playwright/test";
 
 test("portfolio overview shows the verified totals, 13 markets and status text", async ({ page }, testInfo) => {
@@ -6,7 +7,7 @@ test("portfolio overview shows the verified totals, 13 markets and status text",
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
   page.on("pageerror", (e) => errors.push(e.message));
 
-  await page.goto("/");
+  await gotoReady(page, "/");
   await expect(page.getByRole("heading", { level: 1, name: "Portfolio overview" })).toBeVisible();
 
   const kpis = page.getByRole("region", { name: "Portfolio health" });
@@ -34,7 +35,7 @@ test("portfolio overview shows the verified totals, 13 markets and status text",
 
 test("the table scrolls horizontally inside its own region on a narrow viewport", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "narrow-viewport behaviour");
-  await page.goto("/");
+  await gotoReady(page, "/");
   const region = page.getByRole("region", { name: /All markets/ });
   const { scrollWidth, clientWidth } = await region.evaluate((el) => ({ scrollWidth: el.scrollWidth, clientWidth: el.clientWidth }));
   expect(scrollWidth).toBeGreaterThan(clientWidth);

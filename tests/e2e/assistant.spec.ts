@@ -1,4 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
+import { gotoReady } from "./helpers";
 import { expect, test } from "@playwright/test";
 
 const composer = (page: import("@playwright/test").Page) => page.getByRole("textbox", { name: "Ask about the data" });
@@ -6,7 +7,7 @@ const answer = (page: import("@playwright/test").Page) => page.getByRole("articl
 
 test("a streamed answer grows incrementally, shows pending evidence, then completes", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === "mobile", "layout covered in P7; stream behaviour is viewport independent");
-  await page.goto("/");
+  await gotoReady(page, "/");
   await composer(page).fill("Why did Germany's revenue dip in March 2026?");
   await page.getByRole("button", { name: "Send" }).click();
 
@@ -27,7 +28,7 @@ test("a streamed answer grows incrementally, shows pending evidence, then comple
 
 test("Stop mid-answer keeps the partial text and labels evidence unavailable", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === "mobile");
-  await page.goto("/");
+  await gotoReady(page, "/");
   await composer(page).fill("Give me a full portfolio summary");
   await page.getByRole("button", { name: "Send" }).click();
   const text = answer(page).locator("p.whitespace-pre-wrap").first();
@@ -43,7 +44,7 @@ test("Stop mid-answer keeps the partial text and labels evidence unavailable", a
 
 test("the supplied error fixture shows an error with retry, and the dashboard stays usable", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === "mobile");
-  await page.goto("/");
+  await gotoReady(page, "/");
   await composer(page).fill("force error");
   await page.getByRole("button", { name: "Send" }).click();
   await expect(answer(page).getByRole("alert")).toBeVisible();
@@ -55,7 +56,7 @@ test("the supplied error fixture shows an error with retry, and the dashboard st
 test("when /api/chat is down the dashboard works and the chat shows a failure with retry", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === "mobile");
   await page.route("**/api/chat", (route) => route.fulfill({ status: 503, body: "unavailable" }));
-  await page.goto("/");
+  await gotoReady(page, "/");
   await composer(page).fill("germany");
   await page.getByRole("button", { name: "Send" }).click();
   await expect(answer(page).getByRole("alert")).toContainText("HTTP 503");
@@ -65,9 +66,49 @@ test("when /api/chat is down the dashboard works and the chat shows a failure wi
 
 test("'Germany next year' abstains instead of answering about Germany", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === "mobile");
-  await page.goto("/");
+  await gotoReady(page, "/");
   await composer(page).fill("Germany next year");
   await page.getByRole("button", { name: "Send" }).click();
   await expect(answer(page).getByText("Answer complete.")).toBeVisible({ timeout: 15_000 });
   await expect(answer(page)).toContainText(/can't|cannot|beyond|not able|only/i);
+});
+
+test("transient 503s are retried automatically and the answer is not duplicated", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile");
+  let calls = 0;
+  await page.route("**/api/chat", (route) => {
+    calls += 1;
+    return calls <= 2 ? route.fulfill({ status: 503, body: "busy" }) : route.continue();
+  });
+  await gotoReady(page, "/");
+  await composer(page).fill("Why did Germany's revenue dip in March 2026?");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(answer(page).getByText(/Retrying automatically/)).toBeVisible();
+  await expect(answer(page).getByText("Answer complete.")).toBeVisible({ timeout: 20_000 });
+  expect(calls).toBe(3);
+  const text = (await answer(page).locator("p.whitespace-pre-wrap").first().textContent()) ?? "";
+  expect(text.match(/Germany's revenue fell/g)).toHaveLength(1);
+});
+
+test("Stop during the retry backoff ends the generation and sends no more requests", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile");
+  let calls = 0;
+  await page.route("**/api/chat", (route) => {
+    calls += 1;
+    return route.fulfill({ status: 503, body: "busy" });
+  });
+  await gotoReady(page, "/");
+  await composer(page).fill("germany");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(answer(page).getByText(/Retrying automatically/)).toBeVisible();
+  await page.getByRole("button", { name: "Stop" }).click();
+  await expect(answer(page).getByText(/Stopped\./)).toBeVisible();
+  await page.waitForTimeout(2500);
+  expect(calls).toBe(1);
+});
+
+test("an oversized question is rejected by the route with a 400 message", async ({ request, baseURL }) => {
+  const res = await request.post(`${baseURL}/api/chat`, { data: { question: "x".repeat(600) } });
+  expect(res.status()).toBe(400);
+  expect(await res.json()).toEqual({ error: expect.stringContaining("too long") });
 });
