@@ -1,18 +1,18 @@
 {
-  "measuredAt": "2026-11-04T13:05:43.709Z",
+  "measuredAt": "2026-11-04T14:37:58.527Z",
   "node": "v22.22.0",
   "pages": {
     "/ (executive)": {
       "scripts": 13,
-      "raw": 810311,
-      "gzip": 246690,
-      "brotli": 214732
+      "raw": 811143,
+      "gzip": 246946,
+      "brotli": 214940
     },
     "/?mode=analyst": {
       "scripts": 13,
-      "raw": 810311,
-      "gzip": 246690,
-      "brotli": 214732
+      "raw": 811143,
+      "gzip": 246946,
+      "brotli": 214940
     }
   },
   "lazy": [

@@ -38,7 +38,7 @@ pnpm bundle         # first-load JS size (writes docs/performance/bundle.json)
 
 No environment variables are needed. `TELEMETRY_LOG=1` makes `/api/telemetry` log sanitised events to the server console.
 
-State of the checks when this was written: 455 unit/component tests, 118 e2e passed (34 skipped by design: desktop-only or mobile-only variants), dependency-cruiser clean, typecheck and lint clean.
+State of the checks when this was written: 455 unit/component tests, 119 e2e passed (35 skipped by design: desktop-only or mobile-only variants), dependency-cruiser clean, typecheck and lint clean.
 
 ## b. Architecture overview
 
@@ -80,7 +80,7 @@ The chat route is the supplied starter route, adapted: input validation (400), a
 
 Everything listed here exists in the repo.
 
-- **Performance budget.** First-load JavaScript is measured by `pnpm bundle` and recorded in [`docs/performance.md`](docs/performance.md): 791.3 KB raw, 240.9 KB gzip, 209.7 KB brotli against an internal budget of 300 KB gzip. Analyst-only surfaces (heatmap, comparison, alert rules with the form library), the map with its geometry, and Recharts are lazy chunks. Token updates are batched per animation frame so streaming does not re-render the dashboard per token.
+- **Performance budget.** First-load JavaScript is measured by `pnpm bundle` and recorded in [`docs/performance.md`](docs/performance.md): 791.3 KB raw, 240.9 KB gzip, 209.7 KB brotli against an internal budget of 300 KB gzip. Analyst-only surfaces (heatmap, comparison, alert rules with the form library), the map with its geometry, and Recharts are lazy chunks, and the chart and the map are fetched only once scrolled near. Token updates are batched per animation frame so streaming does not re-render the dashboard per token.
 - **Core Web Vitals.** Measured, not claimed: see "Measured" below. The `web-vitals` adapter reports CLS, INP, LCP, FCP and TTFB through the telemetry pipeline.
 - **Observability.** `shared/observability` builds events from an allowlist of keys and code-shaped values, so free text (a question, an answer, an error message) cannot be sent even by mistake. Sources: assistant stream outcome (timings, retries, terminal state, classified error code), web-vitals, render errors. Sink: console in development, a beacon to `/api/telemetry` in production. That route re-applies the allowlist, stores nothing and always answers 204; it is the place a RUM vendor would plug in. Tests assert with sentinel strings that no question, answer or citation text leaves the app.
 - **Resilience.** One error boundary per surface. Chart failures fall back to the same data as a table, with "Try again". A failed lazy chunk is retryable (`React.lazy` caches a rejection for good, so retry builds a fresh lazy component). The assistant keeps working when the map is down, and the reverse. The stream has bounded retry (max 2, 500 ms then 1 s plus jitter, honouring `Retry-After` within a 90 s budget), 15 s first-event and idle timeouts, and Stop cancels pending backoff.
@@ -96,9 +96,9 @@ Lighthouse 12.8.2, headless Chrome on one Windows 11 desktop, against a local `n
 | Preset | Perf | A11y | Best practices | SEO | FCP | LCP | TBT | CLS |
 |---|---|---|---|---|---|---|---|---|
 | Desktop | 100 | 100 | 100 | 100 | 0.3 s | 0.6 s | 0 ms | 0 |
-| Mobile (4x CPU, slow 4G) | 81 | 100 | 100 | 100 | 0.9 s | **4.2 s** | 260 ms | 0 |
+| Mobile (4x CPU, slow 4G), 3 runs | 91-92 | 100 | 100 | 100 | 0.9 s | **2.7 s** | 230-255 ms | 0 |
 
-The simulated-mobile LCP is over the 2.5 s target and I have not fixed it. The LCP element is server-rendered text, so the delay is hydrating about 240 KB gzip of first-load JS under a 4x CPU slowdown, not a late resource. These are lab numbers from one machine and one run, not field data, and I do not claim a Core Web Vitals pass. The next steps are listed in [`docs/performance.md`](docs/performance.md).
+The simulated-mobile LCP went from 4.2 s to 2.7 s after the chart and the map stopped downloading until they are scrolled near (`RenderWhenNear`). It is still over the 2.5 s target and I have not fixed that. The LCP element is server-rendered text, so what is left is hydrating React and Next under a 4x CPU slowdown, not a late resource. These are lab numbers from one machine, not field data, and I do not claim a Core Web Vitals pass. What I would try next is listed in [`docs/performance.md`](docs/performance.md).
 
 ## d. Front-end approach and decisions
 
@@ -173,7 +173,7 @@ Where I did not trust generated output: the canned assistant answers (checked ag
 
 ## j. What I would do with more time
 
-- Fix the mobile LCP: render the health strip as a Server Component, hydrate only what the visible surfaces need, drop react-query and zod from the first load, and cut the roughly 135 KiB of unused JS Lighthouse reports.
+- Get the mobile LCP under 2.5 s: render the health strip as a Server Component, hydrate only what the visible surfaces need, and drop react-query and zod (zod/mini) from the first load.
 - Real RUM behind `/api/telemetry` and error tracking with source maps; field Core Web Vitals instead of lab numbers.
 - A manual screen-reader pass and a 400% zoom audit; a dark theme.
 - Run the Playwright happy path and a Stop test against each preview deployment in CI; add the bundle budget as a CI gate.

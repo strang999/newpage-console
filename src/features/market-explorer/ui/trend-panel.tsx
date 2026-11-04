@@ -4,6 +4,7 @@ import { lazy, Suspense, useId, useMemo, useState } from "react";
 import { scopeLabel, scopeMetrics, timeSeries, type Dataset, type Scope, type SeriesPoint } from "@/domains/market";
 import { formatPercent, formatPeriod, formatUsdExact } from "@/shared/lib/format";
 import { ErrorBoundary, SurfaceFallback } from "@/shared/ui/error-boundary";
+import { RenderWhenNear } from "@/shared/ui/render-when-near";
 
 // React.lazy caches a failed import for good, so a retry needs a fresh lazy component (see `retry` below).
 const loadChart = () => import("./trend-chart");
@@ -75,9 +76,11 @@ export function TrendPanel({ dataset, scope, period }: { dataset: Dataset; scope
           >
             {/* The chart needs a definite height (it is 100% high); the fallback above may be any height. */}
             <div className="h-[320px]">
-              <Suspense fallback={<p className="p-4 text-sm text-muted">Loading chart…</p>}>
-                <TrendChart key={attempt} points={points} period={period} />
-              </Suspense>
+              <RenderWhenNear placeholder={<p className="p-4 text-sm text-muted">Chart loads as you scroll to it. The table view has the same values.</p>}>
+                <Suspense fallback={<p className="p-4 text-sm text-muted">Loading chart…</p>}>
+                  <TrendChart key={attempt} points={points} period={period} />
+                </Suspense>
+              </RenderWhenNear>
             </div>
           </ErrorBoundary>
         </div>

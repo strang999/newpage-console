@@ -13,3 +13,9 @@ if (typeof window !== "undefined" && !window.matchMedia) {
     dispatchEvent: () => false,
   });
 }
+
+// Lazy chunks (map, charts) compile on first use; under a loaded parallel run that can exceed the 1 s default.
+if (typeof window !== "undefined") {
+  const { configure } = await import("@testing-library/react");
+  configure({ asyncUtilTimeout: 5000 });
+}

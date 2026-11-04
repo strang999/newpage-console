@@ -112,6 +112,7 @@ test("analyst: the dense table shows every metric and sorts from the keyboard", 
 });
 
 test("both audiences pass axe and have no console errors", async ({ page }) => {
+  test.setTimeout(60_000); // three full page loads, each scrolled through once and scanned by axe
   const errors: string[] = [];
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
   page.on("pageerror", (e) => errors.push(e.message));

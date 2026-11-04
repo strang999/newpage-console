@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { gotoReady, shot } from "./helpers";
+import { gotoReady, revealLazySurfaces, shot } from "./helpers";
 
 const countries = (page: Page) => page.getByRole("button", { name: /Press Enter to open/ });
 const h1 = (page: Page) => page.getByRole("heading", { level: 1 });
@@ -124,4 +124,23 @@ test("status view uses a different texture per status on the map itself", async 
   expect(new Set(fills)).toEqual(new Set(["url(#market-map-cat-0-map)", "url(#market-map-cat-1-map)", "url(#market-map-cat-2-map)"]));
   expect(fills.filter((f) => f === "url(#market-map-cat-0-map)")).toHaveLength(7);
   await shot(page, `docs/evidence/P4/map-status-${testInfo.project.name}.png`, { fullPage: true });
+});
+
+test("the map and chart chunks are not downloaded until the page is scrolled near them (mobile first load)", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile");
+  const scripts: string[] = [];
+  page.on("response", async (r) => {
+    if (r.request().resourceType() !== "script") return;
+    try {
+      scripts.push(await r.text());
+    } catch {
+      /* unavailable */
+    }
+  });
+  await gotoReady(page, "/", { reveal: false });
+  await page.waitForTimeout(1500);
+  expect(scripts.some((b) => b.includes('"Fiji"')), "world geometry loaded before the map was near").toBe(false);
+  await revealLazySurfaces(page);
+  await expect(countries(page)).toHaveCount(13);
+  await expect.poll(() => scripts.some((b) => b.includes('"Fiji"'))).toBe(true);
 });

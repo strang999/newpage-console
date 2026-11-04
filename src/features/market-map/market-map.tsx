@@ -3,6 +3,7 @@
 import { lazy, Suspense, useId, useMemo, useState } from "react";
 import { buildMapScale, formatPeriodLabel, marketRows, type Dataset, type MapMetric } from "@/domains/market";
 import { ErrorBoundary, SurfaceFallback } from "@/shared/ui/error-boundary";
+import { RenderWhenNear } from "@/shared/ui/render-when-near";
 import { Legend } from "./ui/legend";
 import { MapTable } from "./ui/map-table";
 import type { Pointer } from "./ui/map-canvas";
@@ -121,9 +122,11 @@ export function MarketMap({
                 </div>
               )}
             >
-              <Suspense fallback={<p className="p-4 text-sm text-muted">Loading map…</p>}>
-                <MapCanvas key={attempt} rows={rows} scale={scale} selectedMarket={selectedMarket} focusedMarket={focusedMarket} onSelect={onSelectMarket} onHover={setHover} onFocusChange={setFocusedMarket} />
-              </Suspense>
+              <RenderWhenNear placeholder={<p className="p-4 text-sm text-muted">The map loads as you scroll to it. The table view has the same values.</p>}>
+                <Suspense fallback={<p className="p-4 text-sm text-muted">Loading map…</p>}>
+                  <MapCanvas key={attempt} rows={rows} scale={scale} selectedMarket={selectedMarket} focusedMarket={focusedMarket} onSelect={onSelectMarket} onHover={setHover} onFocusChange={setFocusedMarket} />
+                </Suspense>
+              </RenderWhenNear>
             </ErrorBoundary>
           </div>
           <p className="mt-1 min-h-[2.75rem] text-sm sm:min-h-6" data-testid="map-readout">
