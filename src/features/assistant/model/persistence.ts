@@ -1,5 +1,6 @@
 import "@/shared/lib/zod-config";
 import { z } from "zod";
+import { viewContextSchema } from "./context";
 import { doneMetaSchema } from "./events";
 import type { Message } from "./reducer";
 
@@ -17,6 +18,7 @@ const failureSchema = z.object({
 const messageSchema = z.object({
   id: z.string(),
   question: z.string(),
+  context: viewContextSchema.optional(),
   attemptId: z.string(),
   status: z.enum(["connecting", "streaming", "complete", "stopped", "error", "incomplete"]),
   text: z.string(),

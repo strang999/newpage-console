@@ -1,3 +1,5 @@
+import type { ViewContext } from "./context";
+
 /**
  * One suggested question per supplied fixture. The mock matches by substring, so these are the questions it can
  * answer well; free text outside them gets the supplied low-confidence fallback. "This quarter" is kept from the
@@ -12,3 +14,15 @@ export const SUGGESTED_PROMPTS: readonly { id: string; text: string; note: strin
   { id: "summary-long", text: "Give me a full portfolio summary", note: "long answer" },
   { id: "error", text: "force error", note: "returns an error" },
 ];
+
+/**
+ * Questions about the view the user is on, answered from the dataset by the lookup. The first one always works, because
+ * "looking at" points at the current view; the second names the market or region outright.
+ */
+export function viewSuggestions(label: string, context: ViewContext): { text: string; note: string }[] {
+  const named = context.marketId || context.regionId;
+  return [
+    { text: "What am I looking at?", note: `the figures for ${label}` },
+    ...(named ? [{ text: `Show the data for ${label.split(" · ")[0]}`, note: "from the dataset, with evidence" }] : []),
+  ];
+}

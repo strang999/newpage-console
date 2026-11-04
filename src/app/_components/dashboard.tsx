@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { AssistantPanel } from "@/features/assistant";
+import { CommandPalette } from "@/features/command-palette";
 import { ExecutiveSummary } from "@/features/executive-summary";
 import { MarketExplorer } from "@/features/market-explorer";
 import { MarketMap } from "@/features/market-map";
@@ -9,9 +10,12 @@ import { MarketsTable, PortfolioHealth } from "@/features/portfolio-overview";
 import { useMediaQuery } from "@/shared/lib/use-media-query";
 import { ErrorBoundary, SurfaceFallback } from "@/shared/ui/error-boundary";
 import { createRetryableLazy, LazySurface } from "@/shared/ui/lazy-surface";
+import { formatPeriodLabel, scopeLabel } from "@/domains/market";
 import { useViewState } from "../_url/use-view-state";
 import { useDataset } from "./dataset-query";
+import { LiveToggle } from "./live-toggle";
 import { ModeToggle } from "./mode-toggle";
+import { useLiveDataset } from "./use-live-dataset";
 
 /** Composition root for the dashboard surfaces. Features receive typed data and callbacks; they never import each other. */
 export function Dashboard() {
@@ -32,6 +36,7 @@ export function Dashboard() {
 
 // Analyst-only surfaces are loaded on demand, so the executive first load does not pay for the form library, the
 // heatmap or the comparison (see docs/performance.md). A failed chunk can be retried (see LazySurface).
+const factTable = createRetryableLazy(() => import("@/features/fact-table").then((m) => m.FactTable));
 const alertRules = createRetryableLazy(() => import("@/features/alert-rules").then((m) => m.AlertRules));
 const marketComparison = createRetryableLazy(() => import("@/features/market-comparison").then((m) => m.MarketComparison));
 const riskHeatmap = createRetryableLazy(() => import("@/features/risk-heatmap").then((m) => m.RiskHeatmap));
@@ -47,8 +52,12 @@ function Guard({ surface, title, children }: { surface: string; title: string; c
   );
 }
 
-function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof useDataset>["data"]> }) {
-  const { state, navigate } = useViewState(dataset);
+function DashboardView({ dataset: base }: { dataset: NonNullable<ReturnType<typeof useDataset>["data"]> }) {
+  // `base` is the supplied dataset (what the assistant and its evidence use); `dataset` is what the dashboard draws, which a
+  // simulated live feed may nudge. The view state (URL) is reconciled against `base`: ids and periods never change.
+  const { state, navigate } = useViewState(base);
+  const [liveOn, setLiveOn] = useState(false);
+  const { dataset, updatedAt } = useLiveDataset(base, liveOn);
   const scope = { regionId: state.region, marketId: state.market, productId: state.product };
   const analyst = state.mode === "analyst";
 
@@ -95,7 +104,13 @@ function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof use
       onSelect={(selection) => navigate(selection)}
       onPeriodChange={(period) => navigate({ period })}
       showChildren={analyst}
-      actions={<ModeToggle mode={state.mode} onChange={(mode) => navigate({ mode })} />}
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          <LiveToggle on={liveOn} onChange={setLiveOn} updatedAt={updatedAt} />
+          <CommandPalette dataset={base} onSelect={(selection) => navigate(selection)} />
+          <ModeToggle mode={state.mode} onChange={(mode) => navigate({ mode })} />
+        </div>
+      }
       afterHeader={<PortfolioHealth dataset={dataset} period={state.period} />}
     />
   );
@@ -119,6 +134,9 @@ function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof use
             <Guard surface="markets-table" title="The markets table">
               <MarketsTable dataset={dataset} period={state.period} onSelectMarket={selectMarket} />
             </Guard>
+            <LazySurface surface="fact-table" title="The monthly facts table" handle={factTable} loadingMinHeight="30rem">
+              {(Facts) => <Facts dataset={dataset} scope={scope} />}
+            </LazySurface>
             {map}
             <LazySurface surface="heatmap" title="The risk heatmap" handle={riskHeatmap} loadingMinHeight="26rem">
               {(Heatmap) => (
@@ -185,7 +203,11 @@ function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof use
         <div className="min-h-0 flex-1 xl:h-full">
           <ErrorBoundary surface="assistant" fallback={(retry) => <SurfaceFallback title="The assistant is unavailable." detail="The dashboard is not affected: every number and chart still works." retry={retry} />}>
           <AssistantPanel
-            dataset={dataset}
+            dataset={base}
+            view={{
+              context: { period: state.period, ...(scope.regionId ? { regionId: scope.regionId } : {}), ...(scope.marketId ? { marketId: scope.marketId } : {}), ...(scope.productId ? { productId: scope.productId } : {}) },
+              label: `${scopeLabel(dataset, scope)} · ${formatPeriodLabel(state.period)}`,
+            }}
             onOpenEvidence={(t) => {
               navigate({ region: t.region, market: t.market, product: t.product, period: t.period });
               setAssistantOpen(false); // on a phone the drawer covers the dashboard: close it so the effect is visible

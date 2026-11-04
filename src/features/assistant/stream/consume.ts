@@ -1,4 +1,5 @@
 import { EventSourceParserStream } from "eventsource-parser/stream";
+import type { ViewContext } from "../model/context";
 import { streamEventSchema, type DoneMeta } from "../model/events";
 
 export type FailureCode =
@@ -34,6 +35,8 @@ export type AttemptOptions = {
   question: string;
   /** Tokens already received: the mock endpoint skips them and streams the rest (a mock-only capability, see README). */
   resumeFrom?: number;
+  /** What the dashboard showed when the question was asked. */
+  context?: ViewContext;
   /** The caller's signal (user Stop, unmount, overall deadline). Distinct from this attempt's own timeouts. */
   signal: AbortSignal;
   timeouts?: AttemptTimeouts;
@@ -91,7 +94,7 @@ export async function runAttempt(options: AttemptOptions): Promise<AttemptResult
 }
 
 async function attemptCore(
-  { question, resumeFrom, onToken, fetchImpl = fetch, endpoint = "/api/chat" }: AttemptOptions,
+  { question, resumeFrom, context, onToken, fetchImpl = fetch, endpoint = "/api/chat" }: AttemptOptions,
   signal: AbortSignal,
   onActivity: () => void,
 ): Promise<AttemptResult> {
@@ -103,7 +106,7 @@ async function attemptCore(
     response = await fetchImpl(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-      body: JSON.stringify(resumeFrom ? { question, resumeFrom } : { question }),
+      body: JSON.stringify({ question, ...(resumeFrom ? { resumeFrom } : {}), ...(context ? { context } : {}) }),
       signal,
     });
   } catch {

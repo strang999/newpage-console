@@ -63,6 +63,18 @@ body {
   transform: translateY(0);
 }
 
+/* Live mode: a figure that just changed is tinted briefly (green up, red down), then settles. Decoration only. */
+@keyframes live-flash-up {
+  from { background-color: var(--color-status-on-track-soft); }
+  to { background-color: transparent; }
+}
+@keyframes live-flash-down {
+  from { background-color: var(--color-status-off-track-soft); }
+  to { background-color: transparent; }
+}
+.live-flash[data-flash="up"] { animation: live-flash-up 1.2s ease-out; }
+.live-flash[data-flash="down"] { animation: live-flash-down 1.2s ease-out; }
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

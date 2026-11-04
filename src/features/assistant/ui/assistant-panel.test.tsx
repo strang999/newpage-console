@@ -7,7 +7,9 @@ import { datasetSchema } from "@/domains/market";
 import { AssistantPanel as Panel } from "./assistant-panel";
 
 const dataset = datasetSchema.parse(raw);
-const AssistantPanel = ({ onOpenEvidence = () => undefined }: { onOpenEvidence?: Parameters<typeof Panel>[0]["onOpenEvidence"] }) => <Panel dataset={dataset} onOpenEvidence={onOpenEvidence} />;
+const AssistantPanel = ({ onOpenEvidence = () => undefined, view }: { onOpenEvidence?: Parameters<typeof Panel>[0]["onOpenEvidence"]; view?: Parameters<typeof Panel>[0]["view"] }) => (
+  <Panel dataset={dataset} onOpenEvidence={onOpenEvidence} view={view} />
+);
 
 afterEach(() => {
   cleanup();
@@ -147,10 +149,11 @@ describe("AssistantPanel", () => {
 
 /** A fetch that immediately returns a complete answer with the given done event. */
 function stubAnswer(done: object, text = "An answer. ") {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(() => Promise.resolve(new Response(enc.encode(frame({ type: "token", value: text }) + frame({ type: "done", ...done })), { status: 200, headers: { "content-type": "text/event-stream" } }))),
+  const fetchMock = vi.fn<typeof fetch>(() =>
+    Promise.resolve(new Response(enc.encode(frame({ type: "token", value: text }) + frame({ type: "done", ...done })), { status: 200, headers: { "content-type": "text/event-stream" } })),
   );
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
 }
 const germanyVeltrix = { marketId: "de", productId: "veltrix", period: "2026-03", label: "Veltrix in Germany, Mar 2026" };
 
@@ -223,6 +226,17 @@ describe("trust surface", () => {
     render(<AssistantPanel />);
     await ask("next year");
     expect(await screen.findByText("AI-generated · not source data")).toBeInTheDocument();
+  });
+
+  it("shows what the dashboard is showing, offers questions about it, and asks in that context", async () => {
+    const fetchMock = stubAnswer({ kind: "normal", citations: [{ marketId: "de", period: "2026-03" }], confidence: "high" });
+    render(<AssistantPanel view={{ context: { marketId: "de", regionId: "eu", period: "2026-03" }, label: "Germany · Mar 2026" }} />);
+    expect(screen.getByTestId("assistant-context")).toHaveTextContent("Asking about Germany · Mar 2026");
+    expect(screen.getByRole("button", { name: /Show the data for Germany/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /What am I looking at\?/ }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as { question: string; context: unknown };
+    expect(body).toEqual({ question: "What am I looking at?", context: { marketId: "de", regionId: "eu", period: "2026-03" } });
   });
 
   it("Open in dashboard hands the host the exact target and closes the drawer", async () => {

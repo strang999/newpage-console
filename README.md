@@ -179,7 +179,16 @@ Where I did not trust generated output: the canned assistant answers (checked ag
 - Run the Playwright happy path and a Stop test against each preview deployment in CI; add the bundle budget as a CI gate.
 - Server persistence for alert rules and a real notification path.
 - Sentence-level citations if the contract grows to carry them; resumable streams with a real backend.
-- Not built (stretch goals): selection-aware suggested prompts and a command palette.
+- Storybook stories for the core components (the one stretch goal I did not build).
+
+## Stretch goals built
+
+All four are covered by unit tests and by [`tests/e2e/stretch.spec.ts`](tests/e2e/stretch.spec.ts).
+
+- **Assistant aware of the view.** The dashboard sends what it is showing (market, region, product, month) with each question; the panel states it ("Asking about Germany · Mar 2026") and offers questions about it. "What am I looking at?" and "how is this market doing?" are answered from the dataset for exactly that view, with the matching citation. Context only fills in for words like *this* or *here*: a place named in the question wins, and unknown ids in the context are ignored by the server (`features/assistant/lookup.ts`).
+- **Command palette (Ctrl/Cmd+K).** Jump to the portfolio, any region, any market or any product in a market. A modal dialog with a combobox (arrow keys, Enter, Escape, focus returns to where it was); the search is pure and tested (`features/command-palette`).
+- **Virtualised dense table.** The analyst view lists all 1,560 monthly facts for the current scope, sortable, with only the visible rows plus a few either side in the page. Spacer rows keep the scrollbar honest and rows carry `aria-rowindex` and the table `aria-rowcount`, so a screen reader still hears "row 812 of 1,561". The windowing maths is a pure function (`features/fact-table/model/window.ts`). No library: for fixed-height rows a window calculation is a few lines, and I wanted to own the accessibility.
+- **Live mode.** A switch starts a simulated feed: every 2.5 s the latest month's actuals and units move by a bounded random walk (+-3% of the supplied value, deterministic, `domains/market/live.ts`). Changed figures flash (not with reduced motion), and the selection, URL, sort order and scroll positions are untouched because the data is the only thing that changes. The assistant and its evidence deliberately keep using the supplied dataset, and the switch says so: the point of the evidence drawer is that it shows source data. Forecasts, prior-year values, earlier months and the supplied status snapshot are never simulated.
 
 ## k. A note on the writing
 

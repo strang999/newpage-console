@@ -151,3 +151,20 @@ describe("resumeFrom (mock-only resume)", () => {
     }
   });
 });
+
+describe("view context", () => {
+  it("answers 'what am I looking at?' from the context the dashboard sent, with the matching citation", async () => {
+    const res = await POST(new Request("http://test/api/chat", { method: "POST", body: JSON.stringify({ question: "what am I looking at?", context: { marketId: "de", regionId: "eu", period: "2026-03" } }) }));
+    const events = (await res.text()).split("\n\n").filter(Boolean).map((f) => JSON.parse(f.replace(/^data: /, "")) as { type: string; value?: string; citations?: unknown });
+    expect(events.filter((e) => e.type === "token").map((e) => e.value).join("")).toContain("You are looking at Germany, Mar 2026");
+    expect(events.at(-1)).toMatchObject({ type: "done", kind: "normal", citations: [{ marketId: "de", period: "2026-03" }] });
+  });
+
+  it("a malformed context is a 400, and a context nobody asked about changes nothing", async () => {
+    const bad = await POST(new Request("http://test/api/chat", { method: "POST", body: JSON.stringify({ question: "x", context: { period: "soon" } }) }));
+    expect(bad.status).toBe(400);
+    const res = await POST(new Request("http://test/api/chat", { method: "POST", body: JSON.stringify({ question: "Germany next year", context: { marketId: "jp", period: "2026-05" } }) }));
+    const text = (await res.text()).split("\n\n").filter(Boolean).map((f) => JSON.parse(f.replace(/^data: /, "")) as { type: string; value?: string }).filter((e) => e.type === "token").map((e) => e.value).join("");
+    expect(text).toContain("I can't answer that");
+  });
+});

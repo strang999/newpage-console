@@ -3,13 +3,15 @@
 import { useId, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import type { CitationInput, Dataset, EvidenceTarget } from "@/domains/market";
 import { useAssistant } from "../model/use-assistant";
-import { SUGGESTED_PROMPTS } from "../model/prompts";
+import type { ViewContext } from "../model/context";
+import { SUGGESTED_PROMPTS, viewSuggestions } from "../model/prompts";
 import { EvidenceDrawer } from "./evidence-drawer";
 import { MessageView } from "./message-view";
 
 const MAX_LENGTH = 500;
 
-export function AssistantPanel({ dataset, onOpenEvidence }: { dataset: Dataset; onOpenEvidence: (target: EvidenceTarget) => void }) {
+/** `view` is what the dashboard shows right now (`label` is its human name); questions are asked in that context. */
+export function AssistantPanel({ dataset, onOpenEvidence, view }: { dataset: Dataset; onOpenEvidence: (target: EvidenceTarget) => void; view?: { context: ViewContext; label: string } }) {
   const { state, busy, ask, stop, retry } = useAssistant();
   const [evidence, setEvidence] = useState<CitationInput | null>(null);
   const [draft, setDraft] = useState("");
@@ -36,10 +38,13 @@ export function AssistantPanel({ dataset, onOpenEvidence }: { dataset: Dataset; 
           ? "The response ended before it finished."
           : "";
 
+  // Suggestions that depend on what the dashboard is showing now; the fixed ones below them do not.
+  const viewPrompts = view ? viewSuggestions(view.label, view.context) : [];
+
   function submit(event?: FormEvent) {
     event?.preventDefault();
     if (busy || !draft.trim()) return;
-    ask(draft);
+    ask(draft, view?.context);
     setDraft("");
     composerRef.current?.focus();
   }
@@ -74,13 +79,30 @@ export function AssistantPanel({ dataset, onOpenEvidence }: { dataset: Dataset; 
           <div>
             <p className="text-sm text-muted">Ask a question about the data, or try one of these:</p>
             <ul className="mt-2 flex flex-col gap-2">
+              {viewPrompts.map((p) => (
+                <li key={p.text}>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      ask(p.text, view?.context);
+                      composerRef.current?.focus();
+                    }}
+                    className="w-full rounded-md border px-3 py-2 text-left text-sm hover:bg-[var(--color-ai-surface)] disabled:opacity-50"
+                    style={{ borderColor: "var(--color-ai-border)" }}
+                  >
+                    {p.text}
+                    <span className="block text-xs text-muted">{p.note}</span>
+                  </button>
+                </li>
+              ))}
               {SUGGESTED_PROMPTS.map((p) => (
                 <li key={p.id}>
                   <button
                     type="button"
                     disabled={busy}
                     onClick={() => {
-                      ask(p.text);
+                      ask(p.text, view?.context);
                       composerRef.current?.focus();
                     }}
                     className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-left text-sm hover:bg-[var(--color-surface-sunken)] disabled:opacity-50"
@@ -106,7 +128,12 @@ export function AssistantPanel({ dataset, onOpenEvidence }: { dataset: Dataset; 
         {announcement}
       </div>
 
-      <form onSubmit={submit} className="border-t border-border p-3">
+      {view && (
+        <p className="border-t border-border px-3 pt-2 text-xs text-muted" data-testid="assistant-context">
+          Asking about <strong className="font-semibold text-[var(--color-text)]">{view.label}</strong> (what the dashboard shows now). “This” and “here” mean this view.
+        </p>
+      )}
+      <form onSubmit={submit} className={view ? "px-3 pb-3 pt-1" : "border-t border-border p-3"}>
         <label htmlFor={inputId} className="text-sm font-medium">
           Ask about the data
         </label>

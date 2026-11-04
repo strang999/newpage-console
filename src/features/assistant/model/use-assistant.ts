@@ -4,6 +4,7 @@ import { useCallback, useEffect, useReducer, useRef } from "react";
 import { track } from "@/shared/observability";
 import type { AttemptResult } from "../stream/consume";
 import { runGeneration } from "../stream/generate";
+import type { ViewContext } from "./context";
 import { loadConversation, maxIdNumber, saveConversation } from "./persistence";
 import { tokenize } from "./tokens";
 import { initialState, isActive, reducer, type AssistantState } from "./reducer";
@@ -17,7 +18,7 @@ type Run = { id: string; attemptId: string; controller: AbortController };
 export function useAssistant(): {
   state: AssistantState;
   busy: boolean;
-  ask: (question: string) => void;
+  ask: (question: string, context?: ViewContext) => void;
   stop: () => void;
   retry: (messageId: string) => void;
 } {
@@ -42,7 +43,7 @@ export function useAssistant(): {
   }, []);
 
   const start = useCallback(
-    async (run: Run, question: string, resumeFrom = 0) => {
+    async (run: Run, question: string, resumeFrom = 0, context?: ViewContext) => {
       current.current = run;
       pending.current = { text: "", frame: 0 };
       const startedAt = performance.now();
@@ -53,6 +54,7 @@ export function useAssistant(): {
         result = await runGeneration({
           question,
           resumeFrom,
+          context,
           signal: run.controller.signal,
           onRetrying: (retry) => {
             retries = retry;
@@ -106,12 +108,12 @@ export function useAssistant(): {
   const nextId = (prefix: string) => `${prefix}${++counter.current}`;
 
   const ask = useCallback(
-    (question: string) => {
+    (question: string, context?: ViewContext) => {
       const text = question.trim();
       if (!text || current.current) return;
       const run: Run = { id: nextId("m"), attemptId: nextId("a"), controller: new AbortController() };
-      dispatch({ type: "asked", id: run.id, question: text, attemptId: run.attemptId });
-      void start(run, text);
+      dispatch({ type: "asked", id: run.id, question: text, attemptId: run.attemptId, context });
+      void start(run, text, 0, context);
     },
     [start],
   );
@@ -123,7 +125,7 @@ export function useAssistant(): {
       if (!message || isActive(message.status) || message.status === "complete") return;
       const run: Run = { id: messageId, attemptId: nextId("a"), controller: new AbortController() };
       dispatch({ type: "retried", id: messageId, attemptId: run.attemptId });
-      void start(run, message.question);
+      void start(run, message.question, 0, message.context);
     },
     [start],
   );
@@ -144,7 +146,7 @@ export function useAssistant(): {
       if (resume && !current.current) {
         const run: Run = { id: resume.id, attemptId: nextId("a"), controller: new AbortController() };
         dispatch({ type: "resumed", id: run.id, attemptId: run.attemptId });
-        void start(run, resume.question, tokenize(resume.text).length);
+        void start(run, resume.question, tokenize(resume.text).length, resume.context);
       }
     }
     restored.current = true;

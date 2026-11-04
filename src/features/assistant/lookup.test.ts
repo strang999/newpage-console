@@ -81,4 +81,35 @@ describe("lookupAnswer", () => {
   it("states figures only: no causal wording", () => {
     expect(lookupAnswer("about germany")?.text).not.toMatch(/because|due to|caused|driven by/i);
   });
+
+  describe("with the dashboard's view as context", () => {
+    const view = { marketId: "de", regionId: "eu", period: "2026-03" };
+
+    it("'what am I looking at?' answers for the market and the period on screen, and cites exactly that", () => {
+      const a = lookupAnswer("what am I looking at?", view);
+      const de = scopeMetrics(d, { marketId: "de", regionId: "eu" }, "2026-03");
+      expect(a?.text).toContain("You are looking at Germany, Mar 2026");
+      expect(a?.text).toContain(formatUsdExact(de.actual));
+      expect(a?.citations).toEqual([{ marketId: "de", period: "2026-03" }]);
+    });
+
+    it("status and share are the latest period's only, so they are left out for an earlier period", () => {
+      expect(lookupAnswer("tell me about this market", view)?.text).not.toMatch(/supplied snapshot/);
+      expect(lookupAnswer("how is this doing", { marketId: "de", regionId: "eu", period: "2026-05" })?.text).toMatch(/supplied snapshot/);
+    });
+
+    it("a product view cites the product, a region view the region, the portfolio view cites the portfolio", () => {
+      expect(lookupAnswer("what is shown here", { ...view, productId: "veltrix" })?.citations).toEqual([{ marketId: "de", productId: "veltrix", period: "2026-03" }]);
+      expect(lookupAnswer("what is shown here", { regionId: "apac", period: "2026-05" })?.citations).toEqual([{ regionId: "apac", period: "2026-05" }]);
+      expect(lookupAnswer("what is shown here", { period: "2026-05" })?.text).toContain("Portfolio overview");
+    });
+
+    it("a named place beats the view; without a pointer word, or without a view, there is no answer; junk context is ignored", () => {
+      expect(lookupAnswer("what is this about japan", view)?.citations[0]?.marketId).toBe("jp");
+      expect(lookupAnswer("hello", view)).toBeNull();
+      expect(lookupAnswer("what am I looking at?")).toBeNull();
+      expect(lookupAnswer("what am I looking at?", { marketId: "zz", period: "1999-01" })).toBeNull();
+      expect(lookupAnswer("what am I looking at?", { marketId: "zz", period: "2026-05" })?.text).toContain("Portfolio overview");
+    });
+  });
 });

@@ -1,6 +1,7 @@
 import "server-only";
 import raw from "@/data/starter/data.json";
 import { datasetSchema, formatPeriodLabel, scopeLabel, scopeMetrics, type Dataset, type Scope } from "@/domains/market";
+import type { ViewContext } from "./model/context";
 import { formatPercent, formatUsdExact } from "@/shared/lib/format";
 
 /** Words people use for a market that are not its dataset name. */
@@ -93,17 +94,33 @@ function findEntities(question: string, d: Dataset): Scope[] {
 
 type Lookup = { text: string; citations: { marketId?: string; regionId?: string; productId?: string; period: string }[] };
 
+/** Words that point at what the dashboard is showing rather than naming something ("this market", "what am I looking at"). */
+const POINTS_AT_VIEW = /(?<![\p{L}\p{N}])(this|here|current|currently|selected|shown|showing|displayed|looking at|on screen|on the screen|dashboard|view)(?![\p{L}\p{N}])/iu;
+
+/** The context the dashboard sent, kept only where it names things that exist in the dataset. */
+export function sanitizeContext(d: Dataset, context: ViewContext | undefined): ViewContext | undefined {
+  if (!context || !d.meta.periods.includes(context.period)) return undefined;
+  const market = d.markets.find((m) => m.id === context.marketId);
+  const region = d.regions.find((r) => r.id === (market?.regionId ?? context.regionId));
+  const product = market ? d.products.find((p) => p.id === context.productId) : undefined;
+  return { period: context.period, ...(region ? { regionId: region.id } : {}), ...(market ? { marketId: market.id } : {}), ...(product ? { productId: product.id } : {}) };
+}
+
 /**
  * A deterministic data lookup for questions the fixtures do not cover but that name a market, region or product
- * ("about UK", "find source data about Japan"). Every figure is computed from the dataset by the same functions the
- * dashboard uses, and each entity is cited, so the answer can be verified in the evidence drawer. It states figures;
- * it never explains causes, because the data cannot.
+ * ("about UK", "find source data about Japan"), or that point at the current view ("what am I looking at?"). Every
+ * figure is computed from the dataset by the same functions the dashboard uses, and each entity is cited, so the
+ * answer can be verified in the evidence drawer. It states figures; it never explains causes, because the data cannot.
  */
-export function lookupAnswer(question: string): Lookup | null {
+export function lookupAnswer(question: string, context?: ViewContext): Lookup | null {
   const d = dataset();
-  const period = d.meta.latestPeriod;
-  const scopes = findEntities(question, d);
-  if (scopes.length === 0) return null;
+  const latest = d.meta.latestPeriod;
+  const view = sanitizeContext(d, context);
+  const named = findEntities(question, d);
+  const fromView = named.length === 0 && view !== undefined && POINTS_AT_VIEW.test(question);
+  if (named.length === 0 && !fromView) return null;
+  const scopes: Scope[] = fromView ? [{ regionId: view.regionId, marketId: view.marketId, productId: view.productId }] : named;
+  const period = fromView ? view.period : latest;
   const lines: string[] = [];
   const citations: Lookup["citations"] = [];
   for (const scope of scopes) {
@@ -114,10 +131,12 @@ export function lookupAnswer(question: string): Lookup | null {
       `${formatPercent(m.growthPct, { signed: true })} year on year`,
       `${formatPercent(m.attainmentPct)} of forecast (${m.gap >= 0 ? "+" : "−"}${formatUsdExact(Math.abs(m.gap))} versus forecast)`,
     ];
-    if (market && !scope.productId) parts.push(`status ${market.kpis.status.replace("_", " ")} (supplied snapshot)`, `market share ${formatPercent(market.kpis.sharePct)} (supplied snapshot)`);
-    const anomalies = market && !scope.productId ? market.kpis.anomalies.map((a) => `${formatPeriodLabel(a.period)}: ${a.note}`) : [];
-    lines.push(`${scopeLabel(d, scope)}, ${formatPeriodLabel(period)}: ${parts.join("; ")}.${anomalies.length ? ` Flagged in the data: ${anomalies.join(" ")}` : ""}`);
-    citations.push({ ...(scope.marketId ? { marketId: scope.marketId } : { regionId: scope.regionId ?? undefined }), ...(scope.productId ? { productId: scope.productId } : {}), period });
+    const snapshot = market && !scope.productId && period === latest;
+    if (snapshot) parts.push(`status ${market.kpis.status.replace("_", " ")} (supplied snapshot)`, `market share ${formatPercent(market.kpis.sharePct)} (supplied snapshot)`);
+    const anomalies = snapshot ? market.kpis.anomalies.map((a) => `${formatPeriodLabel(a.period)}: ${a.note}`) : [];
+    const lead = fromView ? `You are looking at ${scopeLabel(d, scope)}, ${formatPeriodLabel(period)}` : `${scopeLabel(d, scope)}, ${formatPeriodLabel(period)}`;
+    lines.push(`${lead}: ${parts.join("; ")}.${anomalies.length ? ` Flagged in the data: ${anomalies.join(" ")}` : ""}`);
+    citations.push({ ...(scope.marketId ? { marketId: scope.marketId } : scope.regionId ? { regionId: scope.regionId } : {}), ...(scope.productId ? { productId: scope.productId } : {}), period });
   }
   const note = "These are figures from the dataset, not an explanation. Ask “why” or “compare” questions for the prepared analyses.";
   return { text: `${lines.join(" ")} ${note}`, citations };

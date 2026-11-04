@@ -189,8 +189,15 @@ test("phone: the open drawer is a real modal: named dialog, page behind inert an
   await expect(drawer).toHaveAttribute("aria-modal", "true");
   await expect(page.locator("[data-mode] > div").first()).toHaveAttribute("inert", "");
   expect(await page.evaluate(() => getComputedStyle(document.body).overflow)).toBe("hidden");
-  for (let i = 0; i < 25; i++) await page.keyboard.press("Tab");
-  expect(await page.evaluate(() => !!document.activeElement?.closest("#assistant-drawer"))).toBe(true);
+  // Tab never lands on the page behind the drawer. (Past the last control the browser may move focus to its own chrome,
+  // which shows up as <body>; what must never happen is focus inside the dashboard column.)
+  const reachedDashboard: number[] = [];
+  for (let i = 0; i < 30; i++) {
+    await page.keyboard.press("Tab");
+    if (await page.evaluate(() => !!document.activeElement?.closest("[data-mode] > div:first-child"))) reachedDashboard.push(i);
+  }
+  expect(reachedDashboard).toEqual([]);
+  expect(await page.evaluate(() => !!document.activeElement?.closest("#assistant-drawer") || document.activeElement === document.body)).toBe(true);
   await page.getByRole("button", { name: "Close assistant" }).click();
   expect(await page.evaluate(() => getComputedStyle(document.body).overflow)).not.toBe("hidden");
   await expect(page.locator("[data-mode] > div").first()).not.toHaveAttribute("inert", "");

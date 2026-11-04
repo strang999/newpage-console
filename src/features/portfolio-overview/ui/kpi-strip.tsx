@@ -1,12 +1,13 @@
 import type { PortfolioHealth } from "@/domains/market";
+import { FlashOnChange } from "@/shared/ui/flash-on-change";
 import { formatPercent, formatPeriod, formatUsdCompact, formatUsdExact } from "@/shared/lib/format";
 
-function Kpi({ label, value, note, title }: { label: string; value: string; note: string; title?: string }) {
+function Kpi({ label, value, note, title, raw }: { label: string; value: string; note: string; title?: string; raw?: number | null }) {
   return (
     <div className="card">
       <dt className="text-sm text-muted">{label}</dt>
       <dd className="mt-1 text-3xl font-semibold tabular-nums tracking-tight" title={title}>
-        {value}
+        {raw === undefined ? value : <FlashOnChange value={raw}>{value}</FlashOnChange>}
       </dd>
       <dd className="mt-1 text-xs text-muted">{note}</dd>
     </div>
@@ -27,16 +28,19 @@ export function KpiStrip({ health, snapshotPeriod }: { health: PortfolioHealth; 
           label="Revenue"
           value={formatUsdCompact(metrics.actual)}
           title={formatUsdExact(metrics.actual)}
+          raw={metrics.actual}
           note={`${formatUsdExact(metrics.actual)} · derived from monthly facts, ${month}`}
         />
         <Kpi
           label="Growth vs prior year"
           value={formatPercent(metrics.growthPct, { signed: true })}
+          raw={metrics.growthPct}
           note={`Prior year ${formatUsdExact(metrics.priorYear)} · derived, ${month}`}
         />
         <Kpi
           label="Forecast attainment"
           value={formatPercent(metrics.attainmentPct)}
+          raw={metrics.attainmentPct}
           note={`Forecast ${formatUsdExact(metrics.forecast)} · gap ${formatUsdExact(metrics.gap)} · derived, ${month}`}
         />
         <Kpi

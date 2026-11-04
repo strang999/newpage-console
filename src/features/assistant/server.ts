@@ -17,6 +17,7 @@ import { z } from "zod";
 import fixtures from "@/data/starter/fixtures.json";
 import overrides from "@/data/overrides/fixtures.local.json";
 import { lookupAnswer } from "./lookup";
+import { viewContextSchema, type ViewContext } from "./model/context";
 import { tokenize } from "./model/tokens";
 
 type Fixture = {
@@ -36,7 +37,7 @@ function withOverride(fixture: Fixture): Fixture {
   return o ? { ...fixture, answer: { ...fixture.answer, text: o.answer.text, citations: o.answer.citations } } : fixture;
 }
 
-function pickFixture(question: string): Fixture {
+function pickFixture(question: string, context?: ViewContext): Fixture {
   const q = question.toLowerCase();
   const list = fixtures.fixtures as Fixture[];
   const matches = (f: Fixture) => (f.keywords ?? []).some((k) => q.includes(k));
@@ -47,7 +48,7 @@ function pickFixture(question: string): Fixture {
   if (hit) return withOverride(hit);
   // No prepared answer: a question that names a market, region or product gets a cited lookup of its figures
   // instead of the generic "not enough data" reply. Anything else still gets the default.
-  const found = lookupAnswer(question);
+  const found = lookupAnswer(question, context);
   if (found) return { id: "lookup", kind: "normal", answer: { text: found.text, citations: found.citations, confidence: "high" } };
   return withOverride(fixtures.default as Fixture);
 }
@@ -56,6 +57,8 @@ const TOKEN_DELAY_MS = 35;
 const requestSchema = z.object({ question: z.string().trim().min(1, "question is required").max(500, "question is too long (500 characters max)"),
   /** Tokens the client already has (mock-only resume): they are skipped, the rest is streamed. */
   resumeFrom: z.number().int().min(0).max(10_000).optional(),
+  /** What the dashboard was showing; lets "this market" mean something. Unknown ids are ignored, not rejected. */
+  context: viewContextSchema.optional(),
 });
 
 function badRequest(message: string) {
@@ -72,7 +75,7 @@ export async function POST(req: Request) {
   const parsed = requestSchema.safeParse(payload);
   if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? "Invalid request.");
 
-  const fixture = pickFixture(parsed.data.question);
+  const fixture = pickFixture(parsed.data.question, parsed.data.context);
   const resumeFrom = parsed.data.resumeFrom ?? 0;
   const encoder = new TextEncoder();
   const send = (obj: unknown) => encoder.encode(`data: ${JSON.stringify(obj)}

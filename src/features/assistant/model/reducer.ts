@@ -1,3 +1,4 @@
+import type { ViewContext } from "./context";
 import type { DoneMeta } from "./events";
 import type { StreamFailure } from "../stream/consume";
 
@@ -8,6 +9,8 @@ export type PriorAttempt = { attemptId: string; text: string; status: "stopped" 
 export type Message = {
   id: string;
   question: string;
+  /** The dashboard view the question was asked in; kept so Retry and resume ask in the same context. */
+  context?: ViewContext;
   /** The only attempt allowed to change this message. Events from any other attempt are ignored. */
   attemptId: string;
   status: AnswerStatus;
@@ -25,7 +28,7 @@ export type AssistantState = { messages: Message[] };
 export const initialState: AssistantState = { messages: [] };
 
 export type Action =
-  | { type: "asked"; id: string; question: string; attemptId: string }
+  | { type: "asked"; id: string; question: string; attemptId: string; context?: ViewContext }
   | { type: "retried"; id: string; attemptId: string }
   /** Continues an interrupted answer after a reload: same text, new attempt, streaming picks up where it stopped. */
   | { type: "resumed"; id: string; attemptId: string }
@@ -55,7 +58,7 @@ export function reducer(state: AssistantState, action: Action): AssistantState {
       return {
         messages: [
           ...state.messages,
-          { id: action.id, question: action.question, attemptId: action.attemptId, status: "connecting", text: "", meta: null, failure: null, autoRetries: 0, prior: [] },
+          { id: action.id, question: action.question, ...(action.context ? { context: action.context } : {}), attemptId: action.attemptId, status: "connecting", text: "", meta: null, failure: null, autoRetries: 0, prior: [] },
         ],
       };
     case "retried":
