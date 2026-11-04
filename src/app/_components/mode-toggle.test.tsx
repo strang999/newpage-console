@@ -14,13 +14,21 @@ describe("ModeToggle", () => {
     expect(screen.getByRole("radio", { name: "Analyst" })).not.toBeChecked();
   });
 
-  it("reports a change by click and by keyboard", async () => {
+  it("reports a change by click", async () => {
     const onChange = vi.fn();
     render(<ModeToggle mode="executive" onChange={onChange} />);
     await userEvent.click(screen.getByRole("radio", { name: "Analyst" }));
+    expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenLastCalledWith("analyst");
+  });
+
+  it("reports a change by keyboard (a separate render, so the click above cannot satisfy it)", async () => {
+    const onChange = vi.fn();
+    render(<ModeToggle mode="executive" onChange={onChange} />);
+    expect(onChange).not.toHaveBeenCalled();
     screen.getByRole("radio", { name: "Executive" }).focus();
     await userEvent.keyboard("{ArrowRight}");
+    expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenLastCalledWith("analyst");
   });
 });

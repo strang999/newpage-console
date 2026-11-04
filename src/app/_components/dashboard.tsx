@@ -8,6 +8,7 @@ import { MarketExplorer } from "@/features/market-explorer";
 import { MarketMap } from "@/features/market-map";
 import { MarketsTable, PortfolioHealth } from "@/features/portfolio-overview";
 import { RiskHeatmap } from "@/features/risk-heatmap";
+import { useMediaQuery } from "@/shared/lib/use-media-query";
 import { useViewState } from "../_url/use-view-state";
 import { useDataset } from "./dataset-query";
 import { ModeToggle } from "./mode-toggle";
@@ -39,17 +40,35 @@ function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof use
   // false in the server HTML, true once React has hydrated. End-to-end tests wait for it before interacting.
   const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
 
-  // Below the xl breakpoint the assistant is a full-screen drawer. It stays mounted while closed, so the conversation
-  // (and a running generation) survives opening and closing it.
+  // Below the xl breakpoint the assistant is a full-screen modal drawer. It stays mounted while closed, so the
+  // conversation (and a running generation) survives opening and closing it. At xl and above it is the side column.
+  const desktop = useMediaQuery("(min-width: 1280px)");
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const drawerOpen = assistantOpen && !desktop;
   const drawer = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
   useEffect(() => {
-    if (assistantOpen) drawer.current?.focus();
+    if (drawerOpen) drawer.current?.focus();
     else if (wasOpen.current) opener.current?.focus();
-    wasOpen.current = assistantOpen;
-  }, [assistantOpen]);
+    wasOpen.current = drawerOpen;
+  }, [drawerOpen]);
+  useEffect(() => {
+    // The drawer is a modal: the page behind must not scroll while it is open.
+    if (!drawerOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [drawerOpen]);
+  useEffect(() => {
+    // Growing to the desktop layout forgets the open state, so narrowing again does not pop the drawer open.
+    const mql = window.matchMedia("(min-width: 1280px)");
+    const onChange = () => mql.matches && setAssistantOpen(false);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
 
   const selectMarket = (market: string) => navigate({ market });
 
@@ -78,7 +97,7 @@ function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof use
 
   return (
     <div data-hydrated={hydrated} data-mode={state.mode} className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
-      <div className="flex min-w-0 flex-col gap-6">
+      <div className="flex min-w-0 flex-col gap-6" inert={drawerOpen}>
         {explorer}
         {analyst ? (
           <>
@@ -104,9 +123,10 @@ function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof use
       <button
         ref={opener}
         type="button"
-        aria-expanded={assistantOpen}
+        aria-expanded={drawerOpen}
         aria-controls="assistant-drawer"
         onClick={() => setAssistantOpen(true)}
+        inert={drawerOpen}
         className="fixed bottom-4 right-4 z-30 inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-semibold shadow-lg xl:hidden"
         style={{ background: "var(--color-ai-border)", color: "#fff" }}
       >
@@ -120,17 +140,21 @@ function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof use
         id="assistant-drawer"
         ref={drawer}
         tabIndex={-1}
+        role={drawerOpen ? "dialog" : undefined}
+        aria-modal={drawerOpen ? true : undefined}
+        aria-label={drawerOpen ? "Assistant" : undefined}
         onKeyDown={(e) => {
-          if (e.key === "Escape" && assistantOpen) setAssistantOpen(false);
+          // Escape inside the evidence <dialog> closes only that dialog; the drawer closes on the next press.
+          if (e.key === "Escape" && drawerOpen && !(e.target instanceof Element && e.target.closest("dialog"))) setAssistantOpen(false);
         }}
         className={
-          assistantOpen
-            ? "fixed inset-0 z-40 flex flex-col gap-2 bg-canvas p-3 outline-none xl:static xl:z-auto xl:block xl:bg-transparent xl:p-0"
+          drawerOpen
+            ? "fixed inset-0 z-40 flex flex-col gap-2 overscroll-contain bg-canvas p-3 outline-none"
             : "hidden xl:sticky xl:top-4 xl:block xl:h-[calc(100vh-2rem)] xl:self-start"
         }
       >
-        {assistantOpen && (
-          <button type="button" onClick={() => setAssistantOpen(false)} className="self-end rounded-sm border px-3 py-1.5 text-sm font-medium xl:hidden" style={{ borderColor: "var(--color-border-strong)" }}>
+        {drawerOpen && (
+          <button type="button" onClick={() => setAssistantOpen(false)} className="self-end rounded-sm border px-3 py-1.5 text-sm font-medium" style={{ borderColor: "var(--color-border-strong)" }}>
             Close assistant
           </button>
         )}

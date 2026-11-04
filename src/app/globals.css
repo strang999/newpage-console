@@ -13,6 +13,8 @@
 
 html {
   color-scheme: light;
+  /* the sticky header is about 3rem tall: keyboard focus and anchor jumps must not land under it */
+  scroll-padding-top: 4.5rem;
 }
 
 /* The one surface style for dashboard sections. */

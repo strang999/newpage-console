@@ -10,7 +10,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   queryClient.setQueryData(datasetQueryKey, loadDataset());
 
   return (
-    <main id="main" tabIndex={-1} className="mx-auto max-w-[1400px] px-4 py-6">
+    <main id="main" tabIndex={-1} className="mx-auto max-w-[1400px] px-4 pb-24 pt-6 xl:pb-6">
       <HydrationBoundary state={dehydrate(queryClient)}>
         <Dashboard />
       </HydrationBoundary>

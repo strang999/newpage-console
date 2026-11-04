@@ -79,11 +79,16 @@ test("switching audience keeps every selection and puts the mode in the URL", as
   await expect(page.getByRole("heading", { name: "Top risks" })).toBeVisible();
   await expect(a.heatmap).toHaveCount(0);
 
+  // Each audience switch is a history entry: Back returns to the previous audience with the selection intact.
+  await page.goBack();
+  await expect(page).toHaveURL(/\?mode=analyst&region=eu&market=de&period=2026-03&metric=growth$/);
+  await expect(page.getByRole("radio", { name: "Analyst" })).toBeChecked();
+  await expect(a.denseTable).toBeVisible();
+
   // The audience is part of a shareable link.
   await gotoReady(page, "/?mode=analyst&region=eu");
   await expect(page.getByRole("radio", { name: "Analyst" })).toBeChecked();
   await expect(a.denseTable).toBeVisible();
-  await page.goBack();
 });
 
 test("analyst: the dense table shows every metric and sorts from the keyboard", async ({ page }) => {
@@ -172,4 +177,63 @@ test("phone: 'Open in dashboard' from the evidence drawer closes the assistant s
   await expect(page).toHaveURL(/\?region=eu&market=de&product=veltrix&period=2026-03$/);
   await expect(page.getByRole("heading", { name: "Assistant", level: 2 })).toBeHidden();
   await expect(h1(page)).toHaveText("Germany · Veltrix");
+});
+
+test("phone: the open drawer is a real modal: named dialog, page behind inert and not scrollable, Tab stays inside", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile");
+  await gotoReady(page, "/");
+  await page.getByRole("button", { name: "Ask the assistant" }).click();
+  const drawer = page.getByRole("dialog", { name: "Assistant" });
+  await expect(drawer).toBeVisible();
+  await expect(drawer).toHaveAttribute("aria-modal", "true");
+  await expect(page.locator("[data-mode] > div").first()).toHaveAttribute("inert", "");
+  expect(await page.evaluate(() => getComputedStyle(document.body).overflow)).toBe("hidden");
+  for (let i = 0; i < 25; i++) await page.keyboard.press("Tab");
+  expect(await page.evaluate(() => !!document.activeElement?.closest("#assistant-drawer"))).toBe(true);
+  await page.getByRole("button", { name: "Close assistant" }).click();
+  expect(await page.evaluate(() => getComputedStyle(document.body).overflow)).not.toBe("hidden");
+  await expect(page.locator("[data-mode] > div").first()).not.toHaveAttribute("inert", "");
+});
+
+test("phone: Escape inside the evidence dialog closes only the dialog; the drawer closes on the next Escape", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile");
+  await gotoReady(page, "/");
+  await page.getByRole("button", { name: "Ask the assistant" }).click();
+  await page.getByRole("button", { name: /Why did Germany's revenue dip/ }).click();
+  const answer = page.getByRole("article", { name: "Assistant answer" });
+  await expect(answer.getByText("Answer complete.")).toBeVisible({ timeout: 20_000 });
+  await answer.getByRole("button", { name: /Veltrix in Germany, Mar 2026/ }).click();
+  const evidence = page.getByRole("dialog", { name: "Germany · Veltrix · Mar 2026" });
+  await expect(evidence).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(evidence).toBeHidden();
+  await expect(page.getByRole("dialog", { name: "Assistant" })).toBeVisible(); // the drawer is still open
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Assistant" })).toBeHidden();
+});
+
+test("opening the drawer on a phone and growing to desktop gives the normal side column, not a stretched panel", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile");
+  await gotoReady(page, "/");
+  await page.getByRole("button", { name: "Ask the assistant" }).click();
+  await expect(page.getByRole("dialog", { name: "Assistant" })).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.getByRole("dialog", { name: "Assistant" })).toHaveCount(0);
+  const panel = page.locator("#assistant-drawer");
+  await expect(panel).toBeVisible();
+  const style = await panel.evaluate((el) => ({ position: getComputedStyle(el).position, height: el.getBoundingClientRect().height }));
+  expect(style.position).toBe("sticky");
+  expect(style.height).toBeLessThan(900);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator("#assistant-drawer")).toBeHidden(); // narrowing again does not pop the drawer open
+});
+
+test("phone: the floating assistant button never covers the end of the page", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile");
+  await gotoReady(page, "/?mode=analyst");
+  const bottomGap = await page.evaluate(() => {
+    const main = document.querySelector("main");
+    return main ? parseFloat(getComputedStyle(main).paddingBottom) : 0;
+  });
+  expect(bottomGap).toBeGreaterThanOrEqual(80);
 });

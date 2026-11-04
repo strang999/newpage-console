@@ -80,6 +80,19 @@ describe("sortMarketRows", () => {
     expect(rows.map((r) => r.market.id)).toEqual(before);
   });
 
+  it("equal keys keep name order in BOTH directions (the tie-break is name ascending)", () => {
+    const equal = rows.map((r) => ({ ...r, metrics: { ...r.metrics, actual: 1_000_000 } }));
+    const names = (dir: "ascending" | "descending") => sortMarketRows(equal, "revenue", dir).map((r) => r.market.name);
+    const alphabetical = [...equal.map((r) => r.market.name)].sort((a, b) => a.localeCompare(b));
+    expect(names("ascending")).toEqual(alphabetical);
+    expect(names("descending")).toEqual(alphabetical);
+  });
+
+  it("status ties: off track (Germany, Spain), then at risk by name, then on track by name, exact order", () => {
+    expect(order("status", "ascending")).toEqual(["de", "es", "br", "fr", "it", "gb", "au", "ca", "cn", "in", "jp", "mx", "us"]);
+    expect(order("status", "descending")).toEqual(["au", "ca", "cn", "in", "jp", "mx", "us", "br", "fr", "it", "gb", "de", "es"]);
+  });
+
   it("missing values (N/A) sort last in both directions", () => {
     const withNull = rows.map((r) => (r.market.id === "us" ? { ...r, metrics: { ...r.metrics, growthPct: null } } : r));
     expect(sortMarketRows(withNull, "growth", "ascending").at(-1)?.market.id).toBe("us");
