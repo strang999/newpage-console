@@ -19,3 +19,9 @@ if (typeof window !== "undefined") {
   const { configure } = await import("@testing-library/react");
   configure({ asyncUtilTimeout: 5000 });
 }
+
+// Conversations are stored in sessionStorage; never let one test restore another's.
+if (typeof window !== "undefined") {
+  const { afterEach } = await import("vitest");
+  afterEach(() => window.sessionStorage.clear());
+}

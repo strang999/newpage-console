@@ -68,6 +68,27 @@ describe("useAssistant", () => {
     cancel.mockRestore();
   });
 
+  it("a reload mid-answer restores the question and the partial text as interrupted, and Retry starts a new attempt", async () => {
+    const first = stubStream();
+    const a = renderHook(() => useAssistant());
+    act(() => a.result.current.ask("what is at risk?"));
+    await waitFor(() => expect(first.signal()).toBeDefined());
+    first.push(frame({ type: "token", value: "Six markets " }));
+    await waitFor(() => expect(a.result.current.state.messages[0]?.text).toBe("Six markets "));
+    window.dispatchEvent(new Event("pagehide")); // what the browser fires on reload
+    a.unmount();
+
+    const second = stubStream();
+    const b = renderHook(() => useAssistant());
+    await waitFor(() => expect(b.result.current.state.messages).toHaveLength(1));
+    expect(b.result.current.state.messages[0]).toMatchObject({ question: "what is at risk?", text: "Six markets ", status: "incomplete", meta: null });
+    act(() => b.result.current.retry(b.result.current.state.messages[0]?.id ?? ""));
+    await waitFor(() => expect(second.signal()).toBeDefined());
+    const message = b.result.current.state.messages[0];
+    expect(message?.attemptId).not.toBe(a.result.current.state.messages[0]?.attemptId);
+    expect(message?.prior).toHaveLength(1);
+  });
+
   it("a second ask while one is running is ignored", async () => {
     const s = stubStream();
     const { result } = renderHook(() => useAssistant());

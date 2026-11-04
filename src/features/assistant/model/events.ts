@@ -26,6 +26,7 @@ const errorEventSchema = z.object({ type: z.literal("error"), message: z.string(
 
 /** The one SSE event contract. Everything crossing the network boundary is validated against this. */
 export const streamEventSchema = z.discriminatedUnion("type", [tokenEventSchema, doneEventSchema, errorEventSchema]);
+export const doneMetaSchema = doneEventSchema.omit({ type: true });
 export type StreamEvent = z.infer<typeof streamEventSchema>;
 
 /** Metadata that only exists once the stream has finished with a `done` event. */

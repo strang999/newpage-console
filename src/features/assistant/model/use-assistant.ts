@@ -4,6 +4,7 @@ import { useCallback, useEffect, useReducer, useRef } from "react";
 import { track } from "@/shared/observability";
 import type { AttemptResult } from "../stream/consume";
 import { runGeneration } from "../stream/generate";
+import { loadConversation, maxIdNumber, saveConversation } from "./persistence";
 import { initialState, isActive, reducer, type AssistantState } from "./reducer";
 
 type Run = { id: string; attemptId: string; controller: AbortController };
@@ -127,6 +128,33 @@ export function useAssistant(): {
 
   const stop = useCallback(() => {
     current.current?.controller.abort();
+  }, []);
+
+  // Restore this tab's conversation after a reload (in an effect: the server render and first client render are empty).
+  const restored = useRef(false);
+  useEffect(() => {
+    const saved = loadConversation();
+    if (saved.length) {
+      counter.current = Math.max(counter.current, maxIdNumber(saved));
+      dispatch({ type: "restored", messages: saved });
+    }
+    restored.current = true;
+  }, []);
+
+  // Keep the stored copy current: trailing write while tokens stream, immediate write when the page is being hidden.
+  const latest = useRef(state.messages);
+  useEffect(() => {
+    latest.current = state.messages;
+    if (!restored.current || state.messages.length === 0) return;
+    const timer = setTimeout(() => saveConversation(latest.current), 250);
+    return () => clearTimeout(timer);
+  }, [state.messages]);
+  useEffect(() => {
+    const flushNow = () => {
+      if (restored.current && latest.current.length) saveConversation(latest.current);
+    };
+    window.addEventListener("pagehide", flushNow);
+    return () => window.removeEventListener("pagehide", flushNow);
   }, []);
 
   useEffect(() => {

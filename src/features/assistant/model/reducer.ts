@@ -32,7 +32,9 @@ export type Action =
   | { type: "completed"; id: string; attemptId: string; meta: DoneMeta }
   | { type: "failed"; id: string; attemptId: string; failure: StreamFailure }
   | { type: "stopped"; id: string; attemptId: string }
-  | { type: "interrupted"; id: string; attemptId: string };
+  | { type: "interrupted"; id: string; attemptId: string }
+  /** A conversation read back from this tab's session storage after a reload. Ignored if the user already asked something. */
+  | { type: "restored"; messages: Message[] };
 
 export const isActive = (status: AnswerStatus) => status === "connecting" || status === "streaming";
 
@@ -80,6 +82,8 @@ export function reducer(state: AssistantState, action: Action): AssistantState {
       return whileActive(state, action.id, action.attemptId, (m) => ({ ...m, status: "error", failure: action.failure }));
     case "stopped":
       return whileActive(state, action.id, action.attemptId, (m) => ({ ...m, status: "stopped" }));
+    case "restored":
+      return state.messages.length === 0 ? { messages: action.messages } : state;
     case "interrupted":
       return whileActive(state, action.id, action.attemptId, (m) => ({ ...m, status: "incomplete" }));
   }

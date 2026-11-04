@@ -178,3 +178,28 @@ test("an abstention shows 'Can't answer from this data' and no confidence level"
   await expect(notice).toContainText("Can't answer from this data");
   await expect(notice).not.toContainText(/confidence/i);
 });
+
+test("reloading keeps the conversation: a finished answer stays complete, one cut off mid-stream comes back interrupted and can be retried", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile");
+  await gotoReady(page, "/");
+  await composer(page).fill("Which markets are at risk?");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(answer(page).getByText("Answer complete.")).toBeVisible({ timeout: 15_000 });
+
+  await composer(page).fill("Give me a full portfolio summary");
+  await page.getByRole("button", { name: "Send" }).click();
+  const text = answer(page).locator("p.whitespace-pre-wrap").first();
+  await expect.poll(async () => (await text.textContent())?.length ?? 0).toBeGreaterThan(10);
+
+  await page.reload();
+  await page.locator('[data-hydrated="true"]').waitFor();
+  const articles = page.getByRole("article", { name: "Assistant answer" });
+  await expect(articles).toHaveCount(2);
+  await expect(articles.first().getByText("Answer complete.")).toBeVisible();
+  await expect(articles.last().getByText(/ended before it finished\. Evidence is unavailable/)).toBeVisible();
+  expect(((await articles.last().locator("p.whitespace-pre-wrap").first().textContent()) ?? "").length).toBeGreaterThan(5);
+
+  await articles.last().getByRole("button", { name: /Retry/ }).click();
+  await expect(articles.last().getByText("Answer complete.")).toBeVisible({ timeout: 20_000 });
+  await expect(articles).toHaveCount(2);
+});
