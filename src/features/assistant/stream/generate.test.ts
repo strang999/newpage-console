@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AttemptResult } from "./consume";
-import { runGeneration, type RetryPolicy } from "./generate";
+import { DEFAULT_POLICY, runGeneration, type RetryPolicy } from "./generate";
 
 const enc = new TextEncoder();
 const frame = (o: unknown) => `data: ${JSON.stringify(o)}\n\n`;
@@ -190,5 +190,66 @@ describe("Stop and the overall deadline", () => {
     const fetchImpl = vi.fn() as unknown as typeof fetch;
     const result = await runGeneration({ question: "q", signal: user.signal, onToken: () => undefined, fetchImpl, policy });
     expect(result.kind).toBe("aborted");
+  });
+});
+
+describe("DEFAULT_POLICY carries the documented numbers", () => {
+  it("2 retries, 500 ms base, 15 s first event, 15 s idle, 90 s total", () => {
+    expect(DEFAULT_POLICY).toMatchObject({ maxRetries: 2, baseDelayMs: 500, firstEventMs: 15_000, idleMs: 15_000, totalMs: 90_000 });
+    const j = DEFAULT_POLICY.jitter(100);
+    expect(j).toBeGreaterThanOrEqual(0);
+    expect(j).toBeLessThan(100);
+  });
+
+  it("a generation without a policy override times out at 15 s, retries after the backoff, then succeeds", async () => {
+    const calls: number[] = [];
+    const scripts = [hanging(), full("ok ")];
+    const promise = runGeneration({
+      question: "q",
+      signal: new AbortController().signal,
+      onToken: () => undefined,
+      fetchImpl: ((_u: string, init?: RequestInit) => {
+        calls.push(Date.now());
+        const script = scripts[calls.length - 1];
+        if (!script) throw new Error("extra fetch");
+        return script(init?.signal as AbortSignal);
+      }) as typeof fetch,
+    });
+    await vi.advanceTimersByTimeAsync(14_999);
+    expect(calls).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(1 + 750); // timeout, then base 500 ms plus at most 250 ms jitter
+    expect(await promise).toMatchObject({ kind: "done" });
+    expect(calls).toHaveLength(2);
+    expect((calls[1] ?? 0) - (calls[0] ?? 0)).toBeGreaterThanOrEqual(15_500);
+  });
+});
+
+describe("retry and deadline edge cases", () => {
+  it("Retry-After: 0 retries immediately, without backoff", async () => {
+    const h = harness([status(503, { "retry-after": "0" }), full("ok ")]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(await h.promise).toMatchObject({ kind: "done" });
+    expect(h.retries).toEqual([[1, 0]]);
+  });
+
+  it("a backoff longer than the remaining budget stops instead of retrying", async () => {
+    const h = harness([status(503)], { totalMs: 400 });
+    expect(await h.promise).toMatchObject({ kind: "failed", failure: { status: 503 } });
+    expect(h.calls).toHaveLength(1);
+    expect(h.retries).toEqual([]);
+  });
+
+  it("the deadline hitting after tokens ends as incomplete (timed out), keeping the partial text", async () => {
+    const h = harness([hanging(frame({ type: "token", value: "partial " }))], { totalMs: 5_000, idleMs: 60_000, firstEventMs: 60_000 });
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(await h.promise).toEqual({ kind: "incomplete", receivedTokens: true, timedOut: true });
+    expect(h.tokens).toEqual(["partial "]);
+  });
+
+  it("an empty 200 event stream with no tokens is incomplete and is not retried", async () => {
+    const empty: Script = () => Promise.resolve(new Response(new ReadableStream({ start: (c) => c.close() }), { status: 200, headers: SSE }));
+    const h = harness([empty]);
+    expect(await h.promise).toEqual({ kind: "incomplete", receivedTokens: false });
+    expect(h.calls).toHaveLength(1);
   });
 });

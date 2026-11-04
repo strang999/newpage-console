@@ -126,6 +126,14 @@ describe("runAttempt failure classification", () => {
     expect((await run).result).toMatchObject({ kind: "failed", failure: { code: "protocol" } });
   });
 
+  it("a citation with a malformed period still completes (it becomes an unresolved reference later)", async () => {
+    const c = controlled();
+    const run = collect(c.response);
+    c.push(frame({ ...doneEvent, citations: [{ marketId: "de", period: "2026-13" }] }));
+    c.close();
+    expect((await run).result).toMatchObject({ kind: "done", meta: { citations: [{ marketId: "de", period: "2026-13" }] } });
+  });
+
   it("a confidence outside high/medium/low is rejected", async () => {
     const c = controlled();
     const run = collect(c.response);
@@ -197,6 +205,8 @@ describe("parseRetryAfter", () => {
     expect(parseRetryAfter("0")).toBe(0);
     expect(parseRetryAfter("Wed, 21 Oct 2026 07:28:05 GMT", Date.parse("Wed, 21 Oct 2026 07:28:00 GMT"))).toBe(5000);
     expect(parseRetryAfter("soon")).toBeUndefined();
+    expect(parseRetryAfter("   ")).toBeUndefined();
+    expect(parseRetryAfter("")).toBeUndefined();
     expect(parseRetryAfter(null)).toBeUndefined();
   });
 });

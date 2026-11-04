@@ -5,7 +5,8 @@ export const citationSchema = z.object({
   marketId: z.string().optional(),
   regionId: z.string().optional(),
   productId: z.string().optional(),
-  period: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).optional(),
+  /** Not format-checked here: a malformed period must surface as an unresolved reference, not kill the stream. */
+  period: z.string().optional(),
   label: z.string().optional(),
 });
 export type Citation = z.infer<typeof citationSchema>;

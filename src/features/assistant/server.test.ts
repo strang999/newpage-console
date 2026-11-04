@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import starter from "@/data/starter/fixtures.json";
+import overrides from "@/data/overrides/fixtures.local.json";
 import { POST } from "./server";
 
 type Ev = { type: string; value?: string; kind?: string; confidence?: string; message?: string };
@@ -106,5 +108,18 @@ describe("route cancellation", () => {
     const res = await POST(new Request("http://test/api/chat", { method: "POST", body: JSON.stringify({ question: "germany" }), signal: ac.signal }));
     const text = await res.text();
     expect(text).toBe("");
+  });
+});
+
+describe("overridden fixtures keep the starter's kind, confidence and protocol", () => {
+  it.each(overrides.overrides.map((o) => o.id))("%s", async (id) => {
+    const original = starter.fixtures.find((f) => f.id === id);
+    const keyword = original?.keywords?.[0];
+    if (!original || !keyword) throw new Error(`no starter fixture or keyword for ${id}`);
+    const { events } = await ask(keyword);
+    expect(events.at(-1)).toMatchObject({ type: "done", kind: original.kind, confidence: original.answer.confidence });
+    const streamed = events.filter((e) => e.type === "token").map((e) => e.value).join("");
+    expect(streamed).toBe(overrides.overrides.find((o) => o.id === id)?.answer.text);
+    expect(streamed).not.toBe(original.answer.text);
   });
 });

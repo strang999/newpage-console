@@ -47,6 +47,36 @@
       }
     },
     {
+      "id": "germany-dip",
+      "reason": "Original said actuals 'came in well under forecast for those months, which is what pulled the market into off-track territory'. Germany was already at about 92% of forecast before March (Dec 92.7%, Jan 92.6%, Feb 91.1%) and the March forecast fell with the actuals, so the data does not show the dip as the cause of the status. Only the supported facts are stated.",
+      "answer": {
+        "text": "Germany's revenue fell sharply in March 2026 to $1,211,930, down 27.2% from February and 31.0% below the prior year. The drop runs across all five products, each down 29% to 35% year on year in March. Actuals were between 91% and 93% of forecast in every month from December 2025 to May 2026, so the dip is not a new miss against forecast: the March forecast fell along with the actuals. Revenue recovered in April and May but is still 9.7% below the prior year in May. The data shows what fell, not why.",
+        "citations": [
+          {
+            "marketId": "de",
+            "period": "2026-02",
+            "label": "Germany, Feb 2026"
+          },
+          {
+            "marketId": "de",
+            "period": "2026-03",
+            "label": "Germany, Mar 2026 (largest dip)"
+          },
+          {
+            "marketId": "de",
+            "productId": "veltrix",
+            "period": "2026-03",
+            "label": "Veltrix in Germany, Mar 2026"
+          },
+          {
+            "marketId": "de",
+            "period": "2026-05",
+            "label": "Germany, latest period"
+          }
+        ]
+      }
+    },
+    {
       "id": "apac-vs-europe",
       "reason": "Original said Europe is hovering just below 100% and blamed only Germany and Italy. Europe is 95.4% (4.6 points under plan) and the UK and France are also under forecast.",
       "answer": {

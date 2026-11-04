@@ -11,11 +11,11 @@ Updated: 2026-11-03 (Asia/Bangkok). Execution plan: planning package `PLAN-STRIC
 | P2 / F02 explorer | done: review FAIL -> stale-closure defect in `useViewState` + 2 test gaps fixed (pending-URL ref, hook tests, exact table values); commit f37807d | `features/F02-explorer.md` |
 | P3a assistant transport + lifecycle | committed b3e6d77 (130 tests, e2e 20 pass locally). P3 review is run once over all three P3 commits after 3c | below |
 | P3b resilience | implemented, locally verified (159 unit/component tests; e2e 24 pass on clean runs) | below |
-| P3c trust UI | not started | |
+| P3c trust UI + single P3 review | review FAIL (4 defects, 2 incompletes) -> fixed: unsupported causal claim in the unchanged germany-dip fixture (now an override), duplicate error announcement, DEFAULT_POLICY untested, override figures not anchored per entity, hook unmount/flush and retry edge cases untested. 204 tests, e2e 27 pass | `docs/data-quality.md` |
 
 ## Next concrete step
 
-P3c: confidence badge, citations -> evidence drawer -> open in dashboard, data-quality overrides. Then the single P3 review and Anton checkpoint 1.
+P4 choropleth map. Anton checkpoint 1 is now (see chat).
 
 ## Known gaps / limitations
 

@@ -15,6 +15,7 @@ export function AssistantPanel({ dataset, onOpenEvidence }: { dataset: Dataset; 
   const [draft, setDraft] = useState("");
   const inputId = useId();
   const scroller = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const nearBottom = useRef(true);
 
   // Follow the answer only while the reader is already at the bottom.
@@ -25,22 +26,22 @@ export function AssistantPanel({ dataset, onOpenEvidence }: { dataset: Dataset; 
 
   // One announcement per terminal state, never per token: the text is empty while a message is still generating.
   const last = state.messages.at(-1);
+  // Errors are announced by their own role="alert"; the status region covers the other terminal states only.
   const announcement =
-    last?.status === "complete"
+    last?.status === "complete" && last.meta?.kind !== "error"
       ? "Answer complete."
       : last?.status === "stopped"
         ? "Generation stopped."
         : last?.status === "incomplete"
           ? "The response ended before it finished."
-          : last?.status === "error"
-            ? `The assistant failed. ${last.failure?.message ?? ""}`
-            : "";
+          : "";
 
   function submit(event?: FormEvent) {
     event?.preventDefault();
     if (busy || !draft.trim()) return;
     ask(draft);
     setDraft("");
+    composerRef.current?.focus();
   }
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -78,7 +79,10 @@ export function AssistantPanel({ dataset, onOpenEvidence }: { dataset: Dataset; 
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() => ask(p.text)}
+                    onClick={() => {
+                      ask(p.text);
+                      composerRef.current?.focus();
+                    }}
                     className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-left text-sm hover:bg-[var(--color-surface-sunken)] disabled:opacity-50"
                     style={{ borderColor: "var(--color-border-strong)" }}
                   >
@@ -109,6 +113,7 @@ export function AssistantPanel({ dataset, onOpenEvidence }: { dataset: Dataset; 
         <div className="mt-1 flex gap-2">
           <textarea
             id={inputId}
+            ref={composerRef}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={onKeyDown}

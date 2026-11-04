@@ -43,7 +43,7 @@ export type AttemptOptions = {
 const RETRYABLE_STATUS = new Set([429, 502, 503, 504]);
 
 export function parseRetryAfter(header: string | null, now: number = Date.now()): number | undefined {
-  if (!header) return undefined;
+  if (!header || header.trim() === "") return undefined;
   const seconds = Number(header);
   if (Number.isFinite(seconds) && seconds >= 0) return Math.round(seconds * 1000);
   const date = Date.parse(header);
@@ -108,9 +108,8 @@ async function attemptCore(
     if (signal.aborted) return { kind: "aborted", receivedTokens };
     return { kind: "failed", receivedTokens, failure: { code: "network", message: "Could not reach the assistant.", retryable: true } };
   }
-  onActivity();
-
   if (!response.ok) {
+    void response.body?.cancel().catch(() => undefined);
     return {
       kind: "failed",
       receivedTokens,
@@ -124,6 +123,7 @@ async function attemptCore(
     };
   }
   if (!(response.headers.get("content-type") ?? "").toLowerCase().startsWith("text/event-stream")) {
+    void response.body?.cancel().catch(() => undefined);
     return { kind: "failed", receivedTokens, failure: { code: "content_type", message: "The assistant sent an unexpected response type.", retryable: false } };
   }
   if (!response.body) {
