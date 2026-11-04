@@ -7,9 +7,11 @@ import { datasetSchema } from "@/domains/market";
 import { setTelemetrySink, type TelemetryEvent } from "@/shared/observability";
 
 // The lazily loaded canvas throws on render (as a failed chunk load or a drawing bug would).
+const state = { explode: true };
 vi.mock("./ui/map-canvas", () => ({
   default: () => {
-    throw new Error("SENTINEL map exploded");
+    if (state.explode) throw new Error("SENTINEL map exploded");
+    return <div data-testid="map-drawn">map</div>;
   },
 }));
 
@@ -19,6 +21,7 @@ const dataset = datasetSchema.parse(raw);
 const events: TelemetryEvent[] = [];
 let restore: () => void;
 beforeEach(() => {
+  state.explode = true;
   events.length = 0;
   restore = setTelemetrySink((e) => events.push(e));
   vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -54,5 +57,15 @@ describe("MarketMap when the map itself fails", () => {
     await screen.findByRole("alert");
     expect(events).toEqual([{ event: "render_error", surface: "map", errorCode: "render_error" }]);
     expect(JSON.stringify(events)).not.toContain("SENTINEL");
+  });
+
+  it("Try again draws the map once the cause is gone, and the card around it never went away", async () => {
+    render(<MarketMap dataset={dataset} period="2026-05" metric="revenue" selectedMarket={null} onMetricChange={() => undefined} onSelectMarket={() => undefined} />);
+    await screen.findByRole("alert");
+    state.explode = false;
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByTestId("map-drawn")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Markets on the map" })).toBeInTheDocument();
   });
 });

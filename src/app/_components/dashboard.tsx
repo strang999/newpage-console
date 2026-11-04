@@ -1,6 +1,6 @@
 "use client";
 
-import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { AssistantPanel } from "@/features/assistant";
 import { ExecutiveSummary } from "@/features/executive-summary";
 import { MarketExplorer } from "@/features/market-explorer";
@@ -8,6 +8,7 @@ import { MarketMap } from "@/features/market-map";
 import { MarketsTable, PortfolioHealth } from "@/features/portfolio-overview";
 import { useMediaQuery } from "@/shared/lib/use-media-query";
 import { ErrorBoundary, SurfaceFallback } from "@/shared/ui/error-boundary";
+import { createRetryableLazy, LazySurface } from "@/shared/ui/lazy-surface";
 import { useViewState } from "../_url/use-view-state";
 import { useDataset } from "./dataset-query";
 import { ModeToggle } from "./mode-toggle";
@@ -30,18 +31,10 @@ export function Dashboard() {
 }
 
 // Analyst-only surfaces are loaded on demand, so the executive first load does not pay for the form library, the
-// heatmap or the comparison (see docs/performance.md).
-const AlertRules = lazy(() => import("@/features/alert-rules").then((m) => ({ default: m.AlertRules })));
-const MarketComparison = lazy(() => import("@/features/market-comparison").then((m) => ({ default: m.MarketComparison })));
-const RiskHeatmap = lazy(() => import("@/features/risk-heatmap").then((m) => ({ default: m.RiskHeatmap })));
-
-function LoadingCard({ title, minHeight }: { title: string; minHeight: string }) {
-  return (
-    <div className="card text-sm text-muted" style={{ minHeight }} role="status">
-      Loading {title}…
-    </div>
-  );
-}
+// heatmap or the comparison (see docs/performance.md). A failed chunk can be retried (see LazySurface).
+const alertRules = createRetryableLazy(() => import("@/features/alert-rules").then((m) => m.AlertRules));
+const marketComparison = createRetryableLazy(() => import("@/features/market-comparison").then((m) => m.MarketComparison));
+const riskHeatmap = createRetryableLazy(() => import("@/features/risk-heatmap").then((m) => m.RiskHeatmap));
 
 const noopSubscribe = () => () => undefined;
 
@@ -127,27 +120,19 @@ function DashboardView({ dataset }: { dataset: NonNullable<ReturnType<typeof use
               <MarketsTable dataset={dataset} period={state.period} onSelectMarket={selectMarket} />
             </Guard>
             {map}
-            <Guard surface="heatmap" title="The risk heatmap">
-            <Suspense fallback={<LoadingCard title="the risk heatmap" minHeight="26rem" />}>
-            <RiskHeatmap
-              dataset={dataset}
-              regionId={state.region}
-              selectedMarket={state.market}
-              period={state.period}
-              onSelect={({ market, period }) => navigate({ market, period })}
-            />
-            </Suspense>
-            </Guard>
-            <Guard surface="comparison" title="The comparison">
-              <Suspense fallback={<LoadingCard title="the comparison" minHeight="22rem" />}>
-                <MarketComparison dataset={dataset} period={state.period} compareType={state.compareType} compare={state.compare} onChange={(selection) => navigate(selection)} />
-              </Suspense>
-            </Guard>
-            <Guard surface="alerts" title="Alert rules">
-              <Suspense fallback={<LoadingCard title="alert rules" minHeight="24rem" />}>
-                <AlertRules dataset={dataset} />
-              </Suspense>
-            </Guard>
+            <LazySurface surface="heatmap" title="The risk heatmap" handle={riskHeatmap} loadingMinHeight="26rem">
+              {(Heatmap) => (
+                <Heatmap dataset={dataset} regionId={state.region} selectedMarket={state.market} period={state.period} onSelect={({ market, period }) => navigate({ market, period })} />
+              )}
+            </LazySurface>
+            <LazySurface surface="comparison" title="The comparison" handle={marketComparison} loadingMinHeight="22rem">
+              {(Comparison) => (
+                <Comparison dataset={dataset} period={state.period} compareType={state.compareType} compare={state.compare} onChange={(selection) => navigate(selection)} />
+              )}
+            </LazySurface>
+            <LazySurface surface="alerts" title="Alert rules" handle={alertRules} loadingMinHeight="24rem">
+              {(Alerts) => <Alerts dataset={dataset} />}
+            </LazySurface>
           </>
         ) : (
           <>

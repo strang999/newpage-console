@@ -53,3 +53,12 @@ test("chat stream arrives in multiple chunks over time (not one buffered body)",
   expect(result.tail).toContain('"type":"done"');
   expect(result.tail).toContain('"confidence":"high"');
 });
+
+test("the page declares an app icon that exists, so a normal visit never logs a favicon 404", async ({ page, request, baseURL }) => {
+  await gotoReady(page, "/");
+  const href = await page.locator('link[rel~="icon"]').first().getAttribute("href");
+  expect(href).toMatch(/icon/);
+  const res = await request.get(new URL(href ?? "", baseURL).toString());
+  expect(res.status()).toBe(200);
+  expect(res.headers()["content-type"]).toContain("image/svg");
+});

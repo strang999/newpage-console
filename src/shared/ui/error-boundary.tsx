@@ -1,6 +1,6 @@
 "use client";
 
-import { Component, type ReactNode } from "react";
+import { Component, useEffect, useRef, type ReactNode } from "react";
 import { track } from "../observability";
 
 type Props = {
@@ -34,13 +34,51 @@ export class ErrorBoundary extends Component<Props, { failed: boolean }> {
   }
 }
 
+/** Containers whose fallback is being retried. If the retry fails, the NEW fallback focuses itself when it mounts. */
+const retrying = new WeakSet<Element>();
+
+/**
+ * After "Try again" the button that had focus is gone. If the retry succeeds, focus returns to the container that held the
+ * fallback; if it fails again, the new fallback takes focus when it mounts (see SurfaceFallback). Either way a keyboard or
+ * screen-reader user is never dropped on <body>.
+ */
+function returnFocusToContainer(container: HTMLElement | null) {
+  if (!container) return;
+  retrying.add(container);
+  requestAnimationFrame(() => {
+    if (document.activeElement && document.activeElement !== document.body) return; // something already took focus (the new fallback)
+    if (!container.hasAttribute("tabindex")) container.setAttribute("tabindex", "-1");
+    container.focus({ preventScroll: true });
+  });
+  // A chunk can take a while to fail again; stop expecting a new fallback after a few seconds.
+  setTimeout(() => retrying.delete(container), 5000);
+}
+
 /** A plain, accessible fallback line with a retry button. */
 export function SurfaceFallback({ title, detail, retry }: { title: string; detail: string; retry: () => void }) {
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const parent = box.current?.parentElement;
+    if (parent && retrying.has(parent)) {
+      retrying.delete(parent);
+      box.current?.focus({ preventScroll: true }); // a retry just failed again: put focus on the new explanation
+    }
+  }, []);
+
   return (
-    <div role="alert" className="rounded-sm border p-3 text-sm" style={{ borderColor: "var(--color-status-at-risk)", background: "var(--color-status-at-risk-soft)", color: "var(--color-text)" }}>
+    <div ref={box} tabIndex={-1} role="alert" className="rounded-sm border p-3 text-sm outline-none" style={{ borderColor: "var(--color-status-at-risk)", background: "var(--color-status-at-risk-soft)", color: "var(--color-text)" }}>
       <p className="font-semibold">{title}</p>
       <p className="mt-0.5">{detail}</p>
-      <button type="button" onClick={retry} className="mt-2 rounded-sm border px-3 py-1 font-medium" style={{ borderColor: "var(--color-status-at-risk)" }}>
+      <button
+        type="button"
+        onClick={(event) => {
+          const container = event.currentTarget.closest('[role="alert"]')?.parentElement ?? null;
+          retry();
+          returnFocusToContainer(container);
+        }}
+        className="mt-2 rounded-sm border px-3 py-1 font-medium"
+        style={{ borderColor: "var(--color-status-at-risk)" }}
+      >
         Try again
       </button>
     </div>

@@ -58,7 +58,7 @@ export function MarketTable({
         {sort ? `Sorted by ${COLUMNS.find((c) => c.key === sort.key)?.label.replace("*", "")}, ${sort.direction}.` : "Dataset order. Select a column heading to sort."}
       </p>
       <div role="region" aria-labelledby="market-table-heading" tabIndex={0} className="mt-2 overflow-x-auto rounded-md border border-border bg-surface">
-        <table className="w-full min-w-[980px] border-collapse text-sm">
+        <table className="w-full min-w-[900px] border-collapse text-sm">
           <caption className="sr-only">
             Revenue, forecast, gap, growth, forecast attainment and units by market for {month}, with the supplied market share and status snapshot. Column headings are buttons that sort the table.
           </caption>

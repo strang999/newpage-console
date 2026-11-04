@@ -5,15 +5,16 @@ import { gotoReady, shot } from "./helpers";
 const countries = (page: Page) => page.getByRole("button", { name: /Press Enter to open/ });
 const mapSection = (page: Page) => page.getByRole("region", { name: "Markets on the map" });
 
-/** Fails the lazily loaded chunk that contains the world geometry, as a flaky network or a bad deploy would. */
-async function breakMapChunk(page: Page) {
+/** Fails the lazily loaded chunk whose source contains `marker`, as a flaky network or a bad deploy would. */
+async function breakChunk(page: Page, marker: string) {
   await page.route("**/_next/static/chunks/**", async (route) => {
     const response = await route.fetch();
     const body = await response.text();
-    if (body.includes('"Fiji"')) return route.abort("failed");
+    if (body.includes(marker)) return route.abort("failed");
     return route.fulfill({ response, body });
   });
 }
+const breakMapChunk = (page: Page) => breakChunk(page, '"Fiji"'); // the world geometry ships in the map chunk
 
 test("a failed map chunk leaves the rest of the dashboard alive, with the table as the map", async ({ page }, testInfo) => {
   await breakMapChunk(page);
@@ -127,15 +128,60 @@ test("a missing page shows a clear 404 inside the app shell", async ({ page }) =
   await expect(page.getByRole("link", { name: "Back to the console" })).toBeVisible();
 });
 
-test("reduced motion: the radar and the trend chart render without draw-in animation", async ({ page }, testInfo) => {
+test("a failed analyst chunk (alert rules) is contained, retried with a fresh request, and recovers", async ({ page }) => {
+  await breakChunk(page, "Saved in this browser only");
+  await gotoReady(page, "/?mode=analyst");
+  const alerts = page.getByRole("alert").filter({ hasText: "Alert rules is unavailable." });
+  await expect(alerts).toBeVisible();
+  await expect(page.getByRole("region", { name: /^Risk heatmap/ })).toBeVisible(); // its neighbours are untouched
+  await expect(page.getByRole("heading", { name: "Markets on the map" })).toBeVisible();
+
+  await page.unroute("**/_next/static/chunks/**");
+  await alerts.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByRole("region", { name: "Alert rules" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Name" })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "Alert rules is unavailable." })).toHaveCount(0);
+});
+
+test("after Try again keyboard focus is not left on <body>", async ({ page }) => {
+  await breakChunk(page, "Saved in this browser only");
+  await gotoReady(page, "/?mode=analyst");
+  const button = page.getByRole("alert").filter({ hasText: "Alert rules is unavailable." }).getByRole("button", { name: "Try again" });
+  await button.focus();
+  await page.unroute("**/_next/static/chunks/**");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("region", { name: "Alert rules" })).toBeVisible();
+  expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+});
+
+/** Samples the radar polygon and the actual-revenue line the moment they exist, and again once any animation must be over. */
+async function animationProbe(page: Page) {
+  await gotoReady(page, "/?mode=analyst&compareType=market&compare=de,it,gb");
+  await page.waitForSelector(".recharts-radar-polygon", { state: "attached" });
+  const sample = () =>
+    page.evaluate(() => ({
+      points: document.querySelector(".recharts-radar-polygon")?.getAttribute("points") ?? "",
+      dash: getComputedStyle(document.querySelector(".recharts-line path.recharts-line-curve") as Element).strokeDasharray,
+    }));
+  const first = await sample(); // no waiting: an animation that starts at mount is still in progress here
+  await page.waitForTimeout(2500); // Recharts' default animation is about 1.5 s
+  const final = await sample();
+  return { first, final, radarMoved: first.points !== final.points, lineAnimating: first.dash !== "none" };
+}
+
+test("control: WITHOUT reduced motion the same probe does detect draw-in animation", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  const result = await animationProbe(page);
+  // At least one of the two animated marks must visibly be in motion at first sight, or this test could not prove anything.
+  expect(result.radarMoved || result.lineAnimating, JSON.stringify(result)).toBe(true);
+});
+
+test("reduced motion: the radar polygon and the line are already in their final state the first time they are seen", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === "mobile");
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await gotoReady(page, "/?mode=analyst&compareType=market&compare=de,it,gb");
-  const polygon = page.locator(".recharts-radar-polygon").first();
-  await expect(polygon).toBeAttached();
-  const first = await polygon.getAttribute("points");
-  await page.waitForTimeout(1200);
-  expect(await polygon.getAttribute("points")).toBe(first); // already at its final shape the first time it is seen
-  const dash = await page.locator(".recharts-line").first().locator("path.recharts-line-curve").evaluate((el) => getComputedStyle(el).strokeDasharray);
-  expect(dash).toBe("none");
+  const result = await animationProbe(page);
+  expect(result.radarMoved, JSON.stringify(result)).toBe(false);
+  expect(result.lineAnimating, JSON.stringify(result)).toBe(false);
+  expect(result.first.dash).toBe("none");
 });

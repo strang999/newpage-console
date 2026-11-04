@@ -1,13 +1,16 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import raw from "@/data/starter/data.json";
 import { datasetSchema } from "@/domains/market";
 import { setTelemetrySink, type TelemetryEvent } from "@/shared/observability";
 
+const state = { explode: true };
 vi.mock("./ui/trend-chart", () => ({
   default: () => {
-    throw new Error("SENTINEL chart exploded");
+    if (state.explode) throw new Error("SENTINEL chart exploded");
+    return <div data-testid="chart-drawn">chart</div>;
   },
 }));
 
@@ -17,6 +20,7 @@ const dataset = datasetSchema.parse(raw);
 const events: TelemetryEvent[] = [];
 let restore: () => void;
 beforeEach(() => {
+  state.explode = true;
   events.length = 0;
   restore = setTelemetrySink((e) => events.push(e));
   vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -39,5 +43,15 @@ describe("MarketExplorer when the trend chart fails", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Germany" })).toBeInTheDocument();
     expect(events).toEqual([{ event: "render_error", surface: "trend-chart", errorCode: "render_error" }]);
     expect(JSON.stringify(events)).not.toContain("SENTINEL");
+  });
+
+  it("Try again draws the chart once the cause is gone", async () => {
+    render(<MarketExplorer dataset={dataset} scope={{}} period="2026-05" onSelect={() => undefined} onPeriodChange={() => undefined} />);
+    await screen.findByRole("alert");
+    state.explode = false;
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByTestId("chart-drawn")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Portfolio overview" })).toBeInTheDocument();
   });
 });
